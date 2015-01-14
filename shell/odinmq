@@ -1,8 +1,8 @@
 #! /bin/sh
 #
 # chkconfig: - 55 45
-# description:  The zhaomq daemon is a zhaoonline.com platform service
-# processname: zhaomq
+# description:  The odinmq daemon is a odin's mq
+# processname: odinmq
 
 # Standard LSB functions
 #. /lib/lsb/init-functions
