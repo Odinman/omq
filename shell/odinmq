@@ -1,0 +1,81 @@
+#! /bin/sh
+#
+# chkconfig: - 55 45
+# description:  The zhaomq daemon is a zhaoonline.com platform service
+# processname: zhaomq
+
+# Standard LSB functions
+#. /lib/lsb/init-functions
+
+# Source function library.
+. /etc/init.d/functions
+
+## env
+#export TZ="Asia/Shanghai"
+
+# Check that networking is up.
+. /etc/sysconfig/network
+
+if [ "$NETWORKING" = "no" ]
+then
+    exit 0
+fi
+
+RETVAL=0
+workerdir="/home/odin/go/src/github.com/Odinman/omq"
+Daemon="${workerdir}/omq"
+prog=$(basename $Daemon)
+
+pidfile="${workerdir}/run/${prog}.pid"
+lockfile="${workerdir}/run/${prog}"
+
+start () {
+    echo -n $"Starting $prog: "
+
+    daemon --pidfile ${pidfile} ${Daemon}
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && touch ${lockfile}
+}
+stop () {
+    echo -n $"Stopping $prog: "
+    killproc -p ${pidfile} ${prog}
+    RETVAL=$?
+    echo
+    if [ $RETVAL -eq 0 ] ; then
+        rm -f ${lockfile} ${pidfile}
+    fi
+}
+
+restart () {
+        stop
+        start
+}
+
+
+# See how we were called.
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    status -p ${pidfile} ${prog}
+    RETVAL=$?
+    ;;
+  restart|reload|force-reload)
+    restart
+    ;;
+  condrestart|try-restart)
+    [ -f ${lockfile} ] && restart || :
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|status|restart|reload|force-reload|condrestart|try-restart}"
+    RETVAL=2
+        ;;
+esac
+
+exit $RETVAL
+
