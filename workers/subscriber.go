@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Odinman/omq/utils"
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -15,7 +16,7 @@ func (w *OmqWorker) connectPub() (*zmq.Socket, *zmq.Poller) {
 	soc, _ := zmq.NewSocket(zmq.SUB)
 
 	//get identity
-	identity, _ := getLocalIdentity(fmt.Sprint(basePort)) //防止同一台机器得到相同的identity
+	identity, _ := utils.GetLocalIdentity(fmt.Sprint(basePort)) //防止同一台机器得到相同的identity
 	soc.SetIdentity(identity)
 
 	soc.SetRcvhwm(50000)

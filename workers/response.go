@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Odinman/omq/utils"
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -63,7 +64,7 @@ func (w *OmqWorker) newResponser(i int) {
 			if len(msg) >= 4 { //命令应该大于5帧(包含信封以及空帧)
 				cycles++
 
-				client, cmd := unwrap(msg)
+				client, cmd := utils.Unwrap(msg)
 
 				w.Trace("recv cmd: %s, from client: %q", cmd, client)
 

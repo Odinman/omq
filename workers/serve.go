@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Odinman/omq/utils"
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -123,7 +124,7 @@ func (w *OmqWorker) serve() {
 				}
 
 				//  Any sign of life from worker means it's ready
-				identity, msg := unwrap(msg)
+				identity, msg := utils.Unwrap(msg)
 				nodes = nodeReady(newNode(identity), nodes)
 
 				//  Validate control message, or return reply to client

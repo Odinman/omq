@@ -69,8 +69,8 @@ func (m *MQPool) Get(key string) (mq *msgqueue, err error) {
 		}
 		if len(m.Pool) < m.max {
 			mq = &msgqueue{
-				pusher:  NewSocket(zmq.DEALER, mqBuffer),
-				queuer:  NewSocket(zmq.DEALER, mqBuffer),
+				pusher:  NewSocket(zmq.DEALER, 1000),
+				queuer:  NewSocket(zmq.DEALER, 1000),
 				iPoller: zmq.NewPoller(), //in
 				oPoller: zmq.NewPoller(), //out
 				expire:  expire,
