@@ -8,7 +8,7 @@ import (
 )
 
 type Socket struct {
-	lock *sync.Mutex
+	lock sync.Mutex
 	soc  *zmq.Socket
 	hwm  int
 }
@@ -21,9 +21,8 @@ func NewSocket(zt zmq.Type, hwm int) *Socket {
 	soc.SetSndhwm(hwm)
 	soc.SetRcvhwm(hwm)
 	return &Socket{
-		lock: new(sync.Mutex),
-		soc:  soc,
-		hwm:  hwm,
+		soc: soc,
+		hwm: hwm,
 	}
 }
 
