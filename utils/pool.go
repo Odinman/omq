@@ -1,5 +1,4 @@
 // Package utils provides zmq connection pool
-// reference github.com/garyburd/redigo/redis
 package utils
 
 import (
@@ -20,7 +19,7 @@ type Pool struct {
 	cond   *sync.Cond
 	closed bool
 
-	// 获取连接的方法
+	// 获取新连接的方法
 	New func() (*zmq.Socket, error)
 
 	Max int
@@ -79,15 +78,12 @@ func (p *Pool) Get() (*PooledSocket, error) {
 
 	for { //不get到誓不罢休
 		// Get pooled item.
-		for i, n := 0, p.pool.Len(); i < n; i++ { //最差情况是遍历全部还没找到
-			if e := p.pool.Front(); e != nil { //LRU,队列最前面的是最少使用的
-				ps := e.Value.(*PooledSocket)
-				if !ps.inUse {
-					ps.inUse = true
-					//ps.expire = time.Now().Add(p.Life) //取的时候不延长, 归还的时候延长
-					p.pool.MoveToBack(e) //移到最后
-					return ps, nil
-				}
+		if e := p.pool.Front(); e != nil { //如果存在未使用的item,第一个肯定是
+			ps := e.Value.(*PooledSocket)
+			if !ps.inUse {
+				ps.inUse = true
+				p.pool.MoveToBack(e) //移到最后
+				return ps, nil
 			}
 		}
 
@@ -122,7 +118,7 @@ func (p *Pool) Get() (*PooledSocket, error) {
 
 /* }}} */
 
-/* {{{ func (ps *PooledSocket) Close() {
+/* {{{ func (ps *PooledSocket) Close(destory ...bool)
  *
  */
 func (ps *PooledSocket) Close(destory ...bool) {
