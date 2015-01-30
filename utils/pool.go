@@ -104,7 +104,6 @@ func (p *Pool) Get() (*PooledSocket, error) {
 		}
 
 		if !p.Wait { //不等就结束
-			p.mu.Unlock()
 			return nil, fmt.Errorf("Pool full at %d", p.Max)
 		}
 
