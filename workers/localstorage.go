@@ -31,7 +31,11 @@ type LocalStorage struct {
 
 func (w *OmqWorker) localStorage(cmd []string) error {
 
-	w.Trace("save local storage: %q", cmd)
+	if Redis == nil { //没有本地存储
+		return fmt.Errorf("can't reach localstorage")
+	} else {
+		w.Trace("save local storage: %q", cmd)
+	}
 
 	// 解析命令
 	if len(cmd) >= 3 {

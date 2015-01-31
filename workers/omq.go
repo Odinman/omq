@@ -34,7 +34,8 @@ func (w *OmqWorker) Main() error {
 	servers := strings.Split(redisAddr, ",")       //支持多个地址,逗号分隔
 	sentinels := strings.Split(redisSentinel, ",") //支持多个地址,逗号分隔
 	if Redis, e = zredis.InitZRedis(servers, sentinels, redisPwd, redisDB, redisMTag); e != nil {
-		panic(e)
+		//panic(e)
+		w.Error("localstorage unreachable: %s", e)
 	}
 
 	// Socket to pub
