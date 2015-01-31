@@ -74,7 +74,14 @@ func (w *OmqWorker) newResponser(i int) {
 				act := strings.ToUpper(cmd[0])
 				key := cmd[1]
 				switch act {
-				case "GET", "SET", "DEL": //key-value命令
+				case "GET": //获取key内容
+					if r, err := w.localGet(cmd); err != nil {
+						w.Debug("error: %s", err)
+						node.SendMessage(client, "", "ERROR") //回复REQ,因此要加上一个空帧
+					} else {
+						node.SendMessage(client, "", r) //回复REQ,因此要加上一个空帧
+					}
+				case "SET", "DEL": //key-value命令
 					// 存到本地存储(同步)
 					//回复结果(带信封, 否则找不到发送者), 因为是异步的, 可以先回复, 再做事
 					if err := w.localStorage(cmd); err != nil {
