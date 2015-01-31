@@ -43,7 +43,6 @@ func (w *OmqWorker) localStorage(cmd []string) error {
 		ls := new(LocalStorage)
 		option := cmd[1]
 		ls.key = cmd[2]
-		ls.value = cmd[3]
 		if option == "" || strings.ToLower(option) == "redis" {
 			//兼容旧版, 新版应该传入一个json,或者为空
 			ls.option = &StorageOption{Type: _STORAGE_REDIS}
@@ -56,6 +55,9 @@ func (w *OmqWorker) localStorage(cmd []string) error {
 			} else {
 				ls.option = o
 			}
+		}
+		if len(cmd) >= 4 {
+			ls.value = cmd[3]
 		}
 		if len(cmd) >= 5 {
 			ls.expire, _ = strconv.Atoi(cmd[3])
