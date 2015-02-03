@@ -32,6 +32,7 @@ type Pool struct {
 type PooledSocket struct {
 	Soc    *zmq.Socket
 	expire time.Time
+	undone bool //未完成
 	inUse  bool
 	pool   *Pool
 	ele    *list.Element //在list中位置
@@ -117,15 +118,14 @@ func (p *Pool) Get() (*PooledSocket, error) {
 
 /* }}} */
 
-/* {{{ func (ps *PooledSocket) Close(destory ...bool)
+/* {{{ func (ps *PooledSocket) Close()
  *
  */
-func (ps *PooledSocket) Close(destory ...bool) {
-	//归还, 保留销毁的选项,由客户端决定
+func (ps *PooledSocket) Close() {
 	p := ps.pool
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if len(destory) > 0 && destory[0] == true {
+	if ps.undone == true {
 		//指示需要销毁
 		ps.Soc.Close()
 		p.pool.Remove(ps.ele)
@@ -137,6 +137,37 @@ func (ps *PooledSocket) Close(destory ...bool) {
 	if p.cond != nil { //唤醒一个, 如果有的话
 		p.cond.Signal()
 	}
+}
+
+/* }}} */
+
+/* {{{ func (ps *PooledSocket) Do(timeout time.Duration, msg ...interface{}) (reply []string, err error)
+ *
+ */
+func (ps *PooledSocket) Do(timeout time.Duration, msg ...interface{}) (reply []string, err error) {
+	p := ps.pool
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	soc := ps.Soc
+	poller := zmq.NewPoller()
+	poller.Add(soc, zmq.POLLIN)
+
+	// send
+	if _, err := soc.SendMessage(msg...); err != nil {
+		return nil, err
+	}
+
+	// recv
+	if sockets, err := poller.Poll(timeout); err != nil {
+		return nil, err
+	} else if len(sockets) == 1 {
+		return soc.RecvMessage(zmq.DONTWAIT)
+	} else {
+		return nil, fmt.Errorf("time out!")
+	}
+
+	return
 }
 
 /* }}} */
