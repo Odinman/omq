@@ -138,7 +138,11 @@ func (ls *LocalStorage) Get() (r string, err error) {
 	redisConn := Redis.Pool.Get()
 	defer redisConn.Close()
 	if result, e := redisConn.Do("GET", ls.key); e == nil {
-		r = string(result.([]byte))
+		if result == nil {
+			r = ""
+		} else {
+			r = string(result.([]byte))
+		}
 	} else {
 		err = e
 	}
