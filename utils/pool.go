@@ -155,15 +155,18 @@ func (ps *PooledSocket) Do(timeout time.Duration, msg ...interface{}) (reply []s
 
 	// send
 	if _, err := soc.SendMessage(msg...); err != nil {
+		ps.undone = true
 		return nil, err
 	}
 
 	// recv
 	if sockets, err := poller.Poll(timeout); err != nil {
+		ps.undone = true
 		return nil, err
 	} else if len(sockets) == 1 {
 		return soc.RecvMessage(zmq.DONTWAIT)
 	} else {
+		ps.undone = true
 		return nil, fmt.Errorf("time out!")
 	}
 
