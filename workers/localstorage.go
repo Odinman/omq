@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -42,7 +43,7 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 
 	// 解析命令
 	if len(cmd) >= 4 {
-		act := strings.ToLower(cmd[0])
+		act := strings.ToUpper(cmd[0])
 		ls := new(LocalStorage)
 		option := cmd[1]
 		ls.key = cmd[2]
@@ -65,10 +66,12 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 		}
 		w.Info("[act: %s][key: %s][value: %s][expire: %d]", act, ls.key, ls.value, ls.expire)
 		switch act {
-		case "set":
+		case COMMAND_SET:
 			return ls.Set()
-		case "del":
+		case COMMAND_DEL:
 			return ls.Del()
+		case COMMAND_SCHEDULE:
+			return ls.Schedule()
 		default:
 			return fmt.Errorf("action error: %s", act)
 		}
@@ -95,7 +98,7 @@ func (w *OmqWorker) localGet(cmd []string) (r string, err error) { //set + del
 
 	// 解析命令
 	if len(cmd) >= 3 {
-		act := strings.ToLower(cmd[0])
+		act := strings.ToUpper(cmd[0])
 		ls := new(LocalStorage)
 		option := cmd[1]
 		ls.key = cmd[2]
@@ -113,7 +116,14 @@ func (w *OmqWorker) localGet(cmd []string) (r string, err error) { //set + del
 			}
 		}
 		w.Info("[act: %s][key: %s]", act, ls.key)
-		return ls.Get()
+		switch act {
+		case COMMAND_GET:
+			return ls.Get()
+		case COMMAND_TIMING:
+			return ls.Timing()
+		default:
+			return "", fmt.Errorf("action error: %s", act)
+		}
 	} else {
 		err = fmt.Errorf("command error: %s", cmd)
 	}
@@ -149,9 +159,33 @@ func (ls *LocalStorage) Get() (r string, err error) {
 	return
 }
 
+func (ls *LocalStorage) Timing() (r string, err error) {
+	redisConn := Redis.Pool.Get()
+	defer redisConn.Close()
+	now := time.Now().Unix() //当前的时间戳
+	if result, e := redisConn.Do("ZRANGEBYSCORE", ls.key, 0, now, 0, 1); e == nil {
+		if result == nil {
+			r = ""
+		} else {
+			r = string(result.([]byte))
+		}
+	} else {
+		err = e
+	}
+	return
+}
+
 func (ls *LocalStorage) Del() error {
 	redisConn := Redis.Pool.Get()
 	defer redisConn.Close()
 	_, err := redisConn.Do("DEL", ls.key)
 	return err
+}
+
+func (ls *LocalStorage) Schedule() (err error) {
+	redisConn := Redis.Pool.Get()
+	defer redisConn.Close()
+	score := ls.expire
+	_, err = redisConn.Do("ZADD", ls.key, score, ls.value)
+	return
 }

@@ -14,6 +14,21 @@ const (
 
 	PPP_READY     = "\001" //  Signals worker is ready
 	PPP_HEARTBEAT = "\002" //  Signals worker heartbeat
+
+	//cmd
+	COMMAND_GET      = "GET"
+	COMMAND_SET      = "SET"
+	COMMAND_DEL      = "DEL"
+	COMMAND_PUSH     = "PUSH"
+	COMMAND_TASK     = "TASK"
+	COMMAND_POP      = "POP"
+	COMMAND_SCHEDULE = "SCHEDULE" //定时任务
+	COMMAND_TIMING   = "TIMING"   //定时触发
+
+	//response
+	RESPONSE_OK      = "OK"
+	RESPONSE_ERROR   = "ERROR"
+	RESPONSE_UNKNOWN = "UNKNOWN"
 )
 
 //config var

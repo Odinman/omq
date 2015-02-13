@@ -74,48 +74,47 @@ func (w *OmqWorker) newResponser(i int) {
 				act := strings.ToUpper(cmd[0])
 				key := cmd[1]
 				switch act {
-				case "GET": //获取key内容
+				case COMMAND_GET, COMMAND_TIMING: //获取key内容
 					if r, err := w.localGet(cmd); err != nil {
 						w.Debug("error: %s", err)
-						node.SendMessage(client, "", "ERROR") //回复REQ,因此要加上一个空帧
+						node.SendMessage(client, "", RESPONSE_ERROR) //回复REQ,因此要加上一个空帧
 					} else {
 						node.SendMessage(client, "", r) //回复REQ,因此要加上一个空帧
 					}
-				case "SET", "DEL": //key-value命令
+				case COMMAND_SET, COMMAND_DEL, COMMAND_SCHEDULE: //key-value命令
 					// 存到本地存储(同步)
 					//回复结果(带信封, 否则找不到发送者), 因为是异步的, 可以先回复, 再做事
 					if err := w.localStorage(cmd); err != nil {
 						w.Debug("error: %s", err)
-						node.SendMessage(client, "", "ERROR") //回复REQ,因此要加上一个空帧
+						node.SendMessage(client, "", RESPONSE_ERROR) //回复REQ,因此要加上一个空帧
 					} else {
-						node.SendMessage(client, "", "OK") //回复REQ,因此要加上一个空帧
+						node.SendMessage(client, "", RESPONSE_OK) //回复REQ,因此要加上一个空帧
 					}
 
 					// 发布(目标是跨IDC多点发布)
 					publisher.SendMessage(cmd)
 
-				case "PUSH", "TASK": //任务队列命令
+				case COMMAND_PUSH, COMMAND_TASK: //任务队列命令
 					value := cmd[2:]
 					if err := mqpool.Push(key, value); err == nil {
-						node.SendMessage(client, "", "OK")
+						node.SendMessage(client, "", RESPONSE_OK)
 					} else {
 						w.Debug("push %s failed: %s", key, err)
 						node.SendMessage(client, "", err.Error())
 					}
-				case "POP":
+				case COMMAND_POP:
 					//cmd, _ := mqueuer.RecvMessage(0)
 					if value, err := mqpool.Pop(key); err == nil {
 						w.Trace("pop value from mqueue: %s", value)
-						node.SendMessage(client, "", "OK", value) //回复REQ,因此要加上一个空帧
+						node.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
 					} else {
 						w.Debug("pop %s from mqueue failed: %s", key, err)
 						node.SendMessage(client, "", err.Error()) //回复REQ,因此要加上一个空帧
 					}
-
 				default:
 					// unknown action
 					w.Debug("unkown action: %s", act)
-					node.SendMessage(client, "", "UNKOWN")
+					node.SendMessage(client, "", RESPONSE_UNKNOWN)
 				}
 
 				// 回满血, 结束
