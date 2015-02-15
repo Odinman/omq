@@ -172,8 +172,14 @@ func (ls *LocalStorage) Timing() (r []string, err error) {
 		if result != nil {
 			switch rt := result.(type) {
 			case []byte:
+				if len(rt) == 0 {
+					return nil, ErrNil
+				}
 				r = []string{string(rt)}
 			case []interface{}:
+				if len(rt) == 0 {
+					return nil, ErrNil
+				}
 				r = make([]string, 0)
 				for _, rtt := range rt {
 					r = append(r, string(rtt.([]byte)))

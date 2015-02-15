@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"errors"
 	"time"
 
 	"github.com/Odinman/ogo"
@@ -28,6 +29,7 @@ const (
 	//response
 	RESPONSE_OK      = "OK"
 	RESPONSE_ERROR   = "ERROR"
+	RESPONSE_NIL     = "NIL"
 	RESPONSE_UNKNOWN = "UNKNOWN"
 )
 
@@ -44,6 +46,8 @@ var (
 	mqBuffer      int
 
 	responseNodes int // 回复节点的个数
+
+	ErrNil = errors.New("NIL")
 )
 
 //get worker config from ogo
