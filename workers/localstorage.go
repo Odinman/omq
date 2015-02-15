@@ -180,10 +180,19 @@ func (ls *LocalStorage) Timing() (r []string, err error) {
 				if len(rt) == 0 {
 					return nil, ErrNil
 				}
+				//zrem := make([]string, 0)
 				r = make([]string, 0)
-				for _, rtt := range rt {
-					r = append(r, string(rtt.([]byte)))
+				for k, rtt := range rt {
+					v := string(rtt.([]byte))
+					r = append(r, v)
+					if k%2 == 0 { //偶数为member(0-based)
+						//fmt.Printf("k:%d,v:%s\n", k, v)
+						//zrem = append(zrem, v)
+						redisConn.Do("ZREM", ls.key, v)
+					}
 				}
+				//redisConn.Do("ZREM", ls.key, strings.Join(zrem, " "))
+				//redisConn.Do("ZREM", ls.key, zrem)
 			default:
 				err = fmt.Errorf("unknown type")
 			}
