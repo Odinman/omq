@@ -28,6 +28,7 @@ type LocalStorage struct {
 	key    string
 	value  string
 	expire int
+	ts     int
 }
 
 /* {{{ func (w *OmqWorker) localStorage(cmd []string) error
@@ -61,16 +62,19 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 			}
 		}
 		ls.value = cmd[3]
-		if len(cmd) >= 5 {
-			ls.expire, _ = strconv.Atoi(cmd[4])
-		}
 		w.Info("[act: %s][key: %s][value: %s][expire: %d]", act, ls.key, ls.value, ls.expire)
 		switch act {
 		case COMMAND_SET:
+			if len(cmd) >= 5 {
+				ls.expire, _ = strconv.Atoi(cmd[4])
+			}
 			return ls.Set()
 		case COMMAND_DEL:
 			return ls.Del()
 		case COMMAND_SCHEDULE:
+			if len(cmd) >= 5 {
+				ls.ts, _ = strconv.Atoi(cmd[4])
+			}
 			return ls.Schedule()
 		default:
 			return fmt.Errorf("action error: %s", act)
@@ -84,10 +88,10 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 
 /* }}} */
 
-/* {{{ func (w *OmqWorker) localGet(cmd []string) (string, error)
+/* {{{ func (w *OmqWorker) localGet(cmd []string) ([]string, error)
  * 处理SET/DEL命令
  */
-func (w *OmqWorker) localGet(cmd []string) (r string, err error) { //set + del
+func (w *OmqWorker) localGet(cmd []string) (r []string, err error) { //set + del
 
 	if Redis == nil { //没有本地存储
 		err = fmt.Errorf("can't reach localstorage")
@@ -122,7 +126,7 @@ func (w *OmqWorker) localGet(cmd []string) (r string, err error) { //set + del
 		case COMMAND_TIMING:
 			return ls.Timing()
 		default:
-			return "", fmt.Errorf("action error: %s", act)
+			return nil, fmt.Errorf("action error: %s", act)
 		}
 	} else {
 		err = fmt.Errorf("command error: %s", cmd)
@@ -144,14 +148,14 @@ func (ls *LocalStorage) Set() (err error) {
 	return
 }
 
-func (ls *LocalStorage) Get() (r string, err error) {
+func (ls *LocalStorage) Get() (r []string, err error) {
 	redisConn := Redis.Pool.Get()
 	defer redisConn.Close()
 	if result, e := redisConn.Do("GET", ls.key); e == nil {
 		if result == nil {
-			r = ""
+			r = nil
 		} else {
-			r = string(result.([]byte))
+			r = []string{string(result.([]byte))}
 		}
 	} else {
 		err = e
@@ -159,15 +163,24 @@ func (ls *LocalStorage) Get() (r string, err error) {
 	return
 }
 
-func (ls *LocalStorage) Timing() (r string, err error) {
+func (ls *LocalStorage) Timing() (r []string, err error) {
 	redisConn := Redis.Pool.Get()
 	defer redisConn.Close()
 	now := time.Now().Unix() //当前的时间戳
-	if result, e := redisConn.Do("ZRANGEBYSCORE", ls.key, 0, now, 0, 1); e == nil {
-		if result == nil {
-			r = ""
-		} else {
-			r = string(result.([]byte))
+	//if result, e := redisConn.Do("ZRANGEBYSCORE", ls.key, 0, now, "LIMIT", 0, 1); e == nil {
+	if result, e := redisConn.Do("ZRANGEBYSCORE", ls.key, 0, now, "WITHSCORES", "LIMIT", 0, 10); e == nil {
+		if result != nil {
+			switch rt := result.(type) {
+			case []byte:
+				r = []string{string(rt)}
+			case []interface{}:
+				r = make([]string, 0)
+				for _, rtt := range rt {
+					r = append(r, string(rtt.([]byte)))
+				}
+			default:
+				err = fmt.Errorf("unknown type")
+			}
 		}
 	} else {
 		err = e
@@ -185,7 +198,6 @@ func (ls *LocalStorage) Del() error {
 func (ls *LocalStorage) Schedule() (err error) {
 	redisConn := Redis.Pool.Get()
 	defer redisConn.Close()
-	score := ls.expire
-	_, err = redisConn.Do("ZADD", ls.key, score, ls.value)
+	_, err = redisConn.Do("ZADD", ls.key, ls.ts, ls.value)
 	return
 }
