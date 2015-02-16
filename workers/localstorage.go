@@ -62,12 +62,13 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 			}
 		}
 		ls.value = cmd[3]
-		w.Info("[act: %s][key: %s][value: %s][expire: %d]", act, ls.key, ls.value, ls.expire)
+		w.Info("[act: %s][key: %s][value: %s]", act, ls.key, ls.value)
 		switch act {
 		case COMMAND_SET:
 			if len(cmd) >= 5 {
 				ls.expire, _ = strconv.Atoi(cmd[4])
 			}
+			w.Debug("expire: %d", ls.expire)
 			return ls.Set()
 		case COMMAND_DEL:
 			return ls.Del()
