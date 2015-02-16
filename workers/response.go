@@ -61,10 +61,9 @@ func (w *OmqWorker) newResponser(i int) {
 				break //  Interrupted
 			}
 
+			client, cmd := utils.Unwrap(msg)
 			if len(msg) >= 4 { //命令应该大于5帧(包含信封以及空帧)
 				cycles++
-
-				client, cmd := utils.Unwrap(msg)
 
 				w.Trace("recv cmd: %s, from client: %q", cmd, client)
 
@@ -83,7 +82,7 @@ func (w *OmqWorker) newResponser(i int) {
 							node.SendMessage(client, "", RESPONSE_ERROR, err.Error()) //回复REQ,因此要加上一个空帧
 						}
 					} else {
-						//w.Debug("response: %v, len: %d", r, len(r))
+						w.Debug("response: %s, len: %d", r, len(r))
 						node.SendMessage(client, "", RESPONSE_OK, r) //回复REQ,因此要加上一个空帧
 					}
 				case COMMAND_SET, COMMAND_DEL, COMMAND_SCHEDULE: //key-value命令
@@ -131,9 +130,11 @@ func (w *OmqWorker) newResponser(i int) {
 					liveness = HEARTBEAT_LIVENESS
 				} else {
 					w.Debug("invalid message: %q", msg)
+					node.SendMessage(client, "", RESPONSE_UNKNOWN)
 				}
 			} else {
 				w.Debug("invalid message: %q", msg)
+				node.SendMessage(client, "", RESPONSE_UNKNOWN)
 			}
 			interval = INTERVAL_INIT
 		} else {

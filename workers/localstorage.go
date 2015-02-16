@@ -153,8 +153,11 @@ func (ls *LocalStorage) Get() (r []string, err error) {
 	defer redisConn.Close()
 	if result, e := redisConn.Do("GET", ls.key); e == nil {
 		if result == nil {
-			r = nil
+			return nil, ErrNil
 		} else {
+			if len(result.([]byte)) == 0 {
+				return nil, ErrNil
+			}
 			r = []string{string(result.([]byte))}
 		}
 	} else {
@@ -169,7 +172,9 @@ func (ls *LocalStorage) Timing() (r []string, err error) {
 	now := time.Now().Unix() //当前的时间戳
 	//if result, e := redisConn.Do("ZRANGEBYSCORE", ls.key, 0, now, "LIMIT", 0, 1); e == nil {
 	if result, e := redisConn.Do("ZRANGEBYSCORE", ls.key, 0, now, "WITHSCORES", "LIMIT", 0, 10); e == nil {
-		if result != nil {
+		if result == nil {
+			return nil, ErrNil
+		} else {
 			switch rt := result.(type) {
 			case []byte:
 				if len(rt) == 0 {
