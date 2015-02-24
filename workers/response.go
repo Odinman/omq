@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"math/rand"
 	"strings"
 	"time"
 
@@ -42,7 +41,6 @@ func (w *OmqWorker) newResponser(i int) {
 	//  Send out heartbeats at regular intervals
 	heartbeat_at := time.Tick(HEARTBEAT_INTERVAL)
 
-	rand.Seed(time.Now().UnixNano())
 	lastCycles := 0
 	for cycles := 0; true; {
 		sockets, err := poller.Poll(HEARTBEAT_INTERVAL)
@@ -66,9 +64,6 @@ func (w *OmqWorker) newResponser(i int) {
 				cycles++
 
 				w.Trace("recv cmd: %s, from client: %q", cmd, client)
-
-				// 假设每个node花了10毫秒做事(测试用,这个可以充分证明多个node的好处)
-				//time.Sleep(10 * time.Millisecond)
 
 				act := strings.ToUpper(cmd[0])
 				key := cmd[1]
