@@ -107,12 +107,12 @@ func (w *OmqWorker) newResponser(i int) {
 						w.Trace("pop value from mqueue: %s", value)
 						node.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
 					} else {
-						w.Debug("pop %s from mqueue failed: %s", key, err)
+						w.Trace("pop %s from mqueue failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error()) //回复REQ,因此要加上一个空帧
 					}
 				default:
 					// unknown action
-					w.Debug("unkown action: %s", act)
+					w.Info("unkown action: %s", act)
 					node.SendMessage(client, "", RESPONSE_UNKNOWN)
 				}
 
@@ -124,11 +124,11 @@ func (w *OmqWorker) newResponser(i int) {
 				if msg[0] == PPP_HEARTBEAT {
 					liveness = HEARTBEAT_LIVENESS
 				} else {
-					w.Debug("invalid message: %q", msg)
+					w.Info("invalid message: %q", msg)
 					node.SendMessage(client, "", RESPONSE_UNKNOWN)
 				}
 			} else {
-				w.Debug("invalid message: %q", msg)
+				w.Info("invalid message: %q", msg)
 				node.SendMessage(client, "", RESPONSE_UNKNOWN)
 			}
 			interval = INTERVAL_INIT
@@ -155,7 +155,7 @@ func (w *OmqWorker) newResponser(i int) {
 		select {
 		case <-heartbeat_at:
 			if cycles > lastCycles {
-				w.Debug("node%d worked cycles: %d", i, cycles)
+				w.Trace("node%d worked cycles: %d", i, cycles)
 				lastCycles = cycles
 			}
 			node.Send(PPP_HEARTBEAT, 0)

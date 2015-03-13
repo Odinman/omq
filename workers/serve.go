@@ -105,6 +105,7 @@ func (w *OmqWorker) serve() {
 		if len(nodes) > 0 {
 			sockets, err = poller2.Poll(HEARTBEAT_INTERVAL)
 		} else {
+			w.Info("nodes empty")
 			sockets, err = poller1.Poll(HEARTBEAT_INTERVAL)
 		}
 		if err != nil {
@@ -168,6 +169,7 @@ func (w *OmqWorker) serve() {
 		default:
 		}
 		nodes = purgeNodes(nodes)
+
 	}
 }
 
