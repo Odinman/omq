@@ -32,13 +32,13 @@ func newNode(identity string) Node {
  */
 func nodeReady(self Node, nodes []Node) []Node {
 	for i, worker := range nodes {
-		if self.id_string == worker.id_string {
-			if i == 0 {
+		if self.identity == worker.identity {
+			if i == 0 { //第一个
 				nodes = nodes[1:]
-			} else if i == len(nodes)-1 {
+			} else if i == len(nodes)-1 { //最后一个
 				nodes = nodes[:i-1]
-			} else {
-				nodes = append(nodes[:i-1], nodes[i:]...)
+			} else { //中间
+				nodes = append(nodes[:i], nodes[i+1:]...)
 			}
 			break
 		}
@@ -102,7 +102,8 @@ func (w *OmqWorker) serve() {
 		//  Poll frontend only if we have available nodes
 		var sockets []zmq.Polled
 		var err error
-		if len(nodes) > 0 {
+		if nl := len(nodes); nl > 0 {
+			//w.Info("nodes len: %d", nl)
 			sockets, err = poller2.Poll(HEARTBEAT_INTERVAL)
 		} else {
 			w.Info("nodes empty")
