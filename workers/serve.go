@@ -36,7 +36,7 @@ func nodeReady(self Node, nodes []Node) []Node {
 			if i == 0 { //第一个
 				nodes = nodes[1:]
 			} else if i == len(nodes)-1 { //最后一个
-				nodes = nodes[:i-1]
+				nodes = nodes[:i]
 			} else { //中间
 				nodes = append(nodes[:i], nodes[i+1:]...)
 			}
