@@ -68,7 +68,7 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 			if len(cmd) >= 5 {
 				ls.expire, _ = strconv.Atoi(cmd[4])
 			}
-			w.Debug("expire: %d", ls.expire)
+			w.Trace("expire: %d", ls.expire)
 			return ls.Set()
 		case COMMAND_DEL:
 			return ls.Del()

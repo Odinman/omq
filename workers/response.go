@@ -96,6 +96,7 @@ func (w *OmqWorker) newResponser(i int) {
 				case COMMAND_PUSH, COMMAND_TASK: //任务队列命令
 					value := cmd[2:]
 					if err := mqpool.Push(key, value); err == nil {
+						w.Debug("push %s successful", key)
 						node.SendMessage(client, "", RESPONSE_OK)
 					} else {
 						w.Debug("push %s failed: %s", key, err)
