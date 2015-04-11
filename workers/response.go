@@ -63,7 +63,7 @@ func (w *OmqWorker) newResponser(i int) {
 			if len(msg) >= 4 { //命令应该大于5帧(包含信封以及空帧)
 				cycles++
 
-				w.Trace("recv cmd: %s, from client: %q", cmd, client)
+				w.Debug("recv cmd: %s, from client: %q", cmd, client)
 
 				act := strings.ToUpper(cmd[0])
 				key := cmd[1]
@@ -107,7 +107,8 @@ func (w *OmqWorker) newResponser(i int) {
 					if value, err := mqpool.Pop(key); err == nil {
 						w.Trace("pop value from mqueue: %s", value)
 						node.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
-					} else if err == ErrNil {
+					} else if err.Error() == RESPONSE_NIL {
+						w.Trace("pop %s error: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_NIL) //没有内容,返回空
 					} else {
 						w.Trace("pop %s from mqueue failed: %s", key, err)

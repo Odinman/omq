@@ -43,7 +43,7 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 	}
 
 	// 解析命令
-	if len(cmd) >= 4 {
+	if len(cmd) >= 3 {
 		act := strings.ToUpper(cmd[0])
 		ls := new(LocalStorage)
 		option := cmd[1]
@@ -61,7 +61,9 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 				ls.option = o
 			}
 		}
-		ls.value = cmd[3]
+		if len(cmd) >= 4 {
+			ls.value = cmd[3]
+		}
 		w.Info("[act: %s][key: %s][value: %s]", act, ls.key, ls.value)
 		switch act {
 		case COMMAND_SET:
