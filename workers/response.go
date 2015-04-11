@@ -107,6 +107,8 @@ func (w *OmqWorker) newResponser(i int) {
 					if value, err := mqpool.Pop(key); err == nil {
 						w.Trace("pop value from mqueue: %s", value)
 						node.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
+					} else if err == ErrNil {
+						node.SendMessage(client, "", RESPONSE_NIL) //没有内容,返回空
 					} else {
 						w.Trace("pop %s from mqueue failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error()) //回复REQ,因此要加上一个空帧

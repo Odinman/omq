@@ -2,6 +2,7 @@ package utils
 
 import (
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"time"
 
@@ -158,7 +159,8 @@ func (m *MQPool) Pop(k string, ext ...interface{}) (v []string, err error) {
 			v, err = q.queuer.RecvMessage(0)
 		} else {
 			// 收不进来, 说明没有东西
-			return nil, fmt.Errorf("queue %s is empty!", k)
+			//return nil, fmt.Errorf("queue %s is empty!", k)
+			return nil, errors.New("NIL")
 		}
 	} else {
 		var second bool
@@ -169,7 +171,7 @@ func (m *MQPool) Pop(k string, ext ...interface{}) (v []string, err error) {
 			}
 		}
 		if second {
-			return nil, err
+			return nil, errors.New("NIL")
 		} else { //第一次访问(正常访问), 需要block
 			time.Sleep(BLOCK_DURATION)
 			return m.Pop(k, true)

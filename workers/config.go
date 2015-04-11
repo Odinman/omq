@@ -47,7 +47,7 @@ var (
 
 	responseNodes int // 回复节点的个数
 
-	ErrNil = errors.New("NIL")
+	ErrNil = errors.New(RESPONSE_NIL)
 )
 
 //get worker config from ogo
