@@ -63,7 +63,7 @@ func (w *OmqWorker) newResponser(i int) {
 			if len(msg) >= 4 { //命令应该大于5帧(包含信封以及空帧)
 				cycles++
 
-				w.Debug("recv cmd: %s, from client: %q", cmd, client)
+				w.Trace("recv cmd: %s, from client: %q", cmd, client)
 
 				act := strings.ToUpper(cmd[0])
 				key := cmd[1]
