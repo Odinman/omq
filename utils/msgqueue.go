@@ -144,10 +144,10 @@ func (m *MQPool) Push(k string, v interface{}) error {
 
 /* }}} */
 
-/* {{{ func (m *MQPool) Pop(k string, ext ...interface{}) (v string, err error)
+/* {{{ func (m *MQPool) Pop(k string) (v string, err error)
  * 出栈
  */
-func (m *MQPool) Pop(k string, ext ...interface{}) (v []string, err error) {
+func (m *MQPool) Pop(k string) (v []string, err error) {
 	if q, err := m.Reach(k); err == nil {
 		//不存在队列就不新建了
 		//sockets, err := q.iPoller.Poll(HEARTBEAT_INTERVAL)
@@ -164,21 +164,7 @@ func (m *MQPool) Pop(k string, ext ...interface{}) (v []string, err error) {
 			return nil, errors.New("NIL")
 		}
 	} else {
-		var second bool
-		if len(ext) > 0 {
-			switch ev := ext[0].(type) {
-			case bool:
-				second = ev
-			}
-		}
-		if second {
-			return nil, errors.New("NIL")
-		} else { //第一次访问(正常访问), 需要block
-			//ogo.Debug("sleep 3s begin")
-			time.Sleep(BLOCK_DURATION)
-			//ogo.Debug("sleep 3s end")
-			return m.Pop(k, true)
-		}
+		return nil, errors.New("NIL")
 	}
 	return
 }
