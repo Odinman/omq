@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	//"github.com/Odinman/ogo"
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -173,7 +174,9 @@ func (m *MQPool) Pop(k string, ext ...interface{}) (v []string, err error) {
 		if second {
 			return nil, errors.New("NIL")
 		} else { //第一次访问(正常访问), 需要block
+			//ogo.Debug("sleep 3s begin")
 			time.Sleep(BLOCK_DURATION)
+			//ogo.Debug("sleep 3s end")
 			return m.Pop(k, true)
 		}
 	}
