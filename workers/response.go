@@ -77,7 +77,7 @@ func (w *OmqWorker) newResponser(i int) {
 							node.SendMessage(client, "", RESPONSE_ERROR, err.Error()) //回复REQ,因此要加上一个空帧
 						}
 					} else {
-						w.Debug("response: %s, len: %d", r, len(r))
+						w.Trace("response: %s, len: %d", r, len(r))
 						node.SendMessage(client, "", RESPONSE_OK, r) //回复REQ,因此要加上一个空帧
 					}
 				case COMMAND_SET, COMMAND_DEL, COMMAND_SCHEDULE: //key-value命令
@@ -105,10 +105,10 @@ func (w *OmqWorker) newResponser(i int) {
 				case COMMAND_POP:
 					//cmd, _ := mqueuer.RecvMessage(0)
 					if value, err := mqpool.Pop(key); err == nil {
-						w.Trace("pop value from mqueue: %s", value)
+						w.Debug("pop value from mqueue: %s", value)
 						node.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
 					} else if err.Error() == RESPONSE_NIL {
-						w.Trace("pop %s error: %s", key, err)
+						w.Trace("pop %s nil: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_NIL) //没有内容,返回空
 					} else {
 						w.Trace("pop %s from mqueue failed: %s", key, err)

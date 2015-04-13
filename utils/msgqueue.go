@@ -151,8 +151,8 @@ func (m *MQPool) Pop(k string) (v []string, err error) {
 	if q, err := m.Reach(k); err == nil {
 		//不存在队列就不新建了
 		//sockets, err := q.iPoller.Poll(HEARTBEAT_INTERVAL)
-		//sockets, err := q.iPoller.Poll(5 * time.Millisecond)
-		sockets, err := q.iPoller.Poll(BLOCK_DURATION) //阻塞交给omq处理
+		sockets, err := q.iPoller.Poll(1 * time.Millisecond)
+		//sockets, err := q.iPoller.Poll(BLOCK_DURATION) //阻塞交给omq处理
 		if err != nil {
 			return nil, err
 		}

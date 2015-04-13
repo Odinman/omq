@@ -64,7 +64,7 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 		if len(cmd) >= 4 {
 			ls.value = cmd[3]
 		}
-		w.Debug("[act: %s][key: %s][value: %s]", act, ls.key, ls.value)
+		w.Trace("[act: %s][key: %s][value: %s]", act, ls.key, ls.value)
 		switch act {
 		case COMMAND_SET:
 			if len(cmd) >= 5 {
@@ -122,7 +122,7 @@ func (w *OmqWorker) localGet(cmd []string) (r []string, err error) { //set + del
 				ls.option = o
 			}
 		}
-		w.Debug("[act: %s][key: %s]", act, ls.key)
+		w.Trace("[act: %s][key: %s]", act, ls.key)
 		switch act {
 		case COMMAND_GET:
 			return ls.Get()
