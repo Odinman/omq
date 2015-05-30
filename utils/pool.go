@@ -19,6 +19,10 @@ type Pool struct {
 	cond   *sync.Cond
 	closed bool
 
+	// logger
+	logger PoolLogger
+	prefix string
+
 	// 获取新连接的方法
 	New func() (*zmq.Socket, error)
 
@@ -27,6 +31,10 @@ type Pool struct {
 	Wait bool //当连接池满的时候是否等待
 
 	Life time.Duration
+}
+
+type PoolLogger interface {
+	Printf(format string, v ...interface{})
 }
 
 type PooledSocket struct {
@@ -38,12 +46,46 @@ type PooledSocket struct {
 	ele    *list.Element //在list中位置
 }
 
-/* {{{ func NewPool(newFn func() (Conn, error), maxIdle int) *Pool
+/* {{{ func NewPool(newFn func() (*zmq.Socket, error), ext ...interface{}) *Pool
  * NewPool creates a new pool. This function is deprecated. Applications should
  * initialize the Pool fields directly as shown in example.
  */
-func NewPool(newFn func() (*zmq.Socket, error), max int, life time.Duration) *Pool {
-	return &Pool{New: newFn, Max: max, Life: life}
+//func NewPool(newFn func() (*zmq.Socket, error), max int, life time.Duration) *Pool {
+func NewPool(newFn func() (*zmq.Socket, error), ext ...interface{}) *Pool {
+	var Max int = 100
+	var Life time.Duration = 60 * time.Second
+	var Logger PoolLogger
+	var Prefix string
+
+	if len(ext) > 0 {
+		if max, ok := ext[0].(int); ok {
+			Max = max
+		}
+	}
+	if len(ext) > 1 {
+		if life, ok := ext[1].(time.Duration); ok {
+			Life = life
+		}
+	}
+	if len(ext) > 2 {
+		if logger, ok := ext[2].(PoolLogger); ok {
+			Logger = logger
+			Prefix = "[OgoPool]"
+		}
+	}
+	return &Pool{New: newFn, Max: Max, Life: Life, logger: Logger, prefix: Prefix}
+}
+
+/* }}} */
+
+/* {{{ func (p *Pool) Debug(format string, v ...interface{})
+ *
+ */
+func (p *Pool) Debug(format string, v ...interface{}) {
+	if p.logger == nil {
+		return
+	}
+	p.logger.Printf(p.prefix+" "+format, v...)
 }
 
 /* }}} */
@@ -79,11 +121,22 @@ func (p *Pool) Get() (*PooledSocket, error) {
 
 	for { //不get到誓不罢休
 		// Get pooled item.
-		if e := p.pool.Front(); e != nil { //如果存在未使用的item,第一个肯定是
+		//if e := p.pool.Front(); e != nil { //如果存在未使用的item,第一个肯定是
+		//	ps := e.Value.(*PooledSocket)
+		//	if !ps.inUse {
+		//		ps.inUse = true
+		//		p.pool.MoveToBack(e) //移到最后
+		//		return ps, nil
+		//	}
+		//}
+		depth := 0
+		for e := p.pool.Front(); e != nil; e = e.Next() {
+			depth++
 			ps := e.Value.(*PooledSocket)
 			if !ps.inUse {
 				ps.inUse = true
 				p.pool.MoveToBack(e) //移到最后
+				p.Debug("find depth: %d, pool len: %d", depth, p.pool.Len())
 				return ps, nil
 			}
 		}
