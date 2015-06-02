@@ -22,7 +22,7 @@ then
 fi
 
 RETVAL=0
-workerdir="/home/odin/go/src/github.com/Odinman/omq"
+workerdir="/services/odinmq"
 Daemon="${workerdir}/omq"
 prog=$(basename $Daemon)
 
