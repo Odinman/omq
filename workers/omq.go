@@ -9,6 +9,7 @@ import (
 	"github.com/Odinman/omq/utils"
 	//"../utils"
 	zmq "github.com/pebbe/zmq4"
+	"gopkg.in/redis.v3"
 )
 
 type OmqWorker struct {
@@ -19,6 +20,7 @@ var (
 	publisher *utils.Socket
 	mqpool    *utils.MQPool
 	Redis     *zredis.ZRedis
+	cc        *redis.ClusterClient
 )
 
 func init() {
@@ -30,12 +32,17 @@ func (w *OmqWorker) Main() error {
 	w.getConfig()
 
 	// connect local storage
-	var e error
-	servers := strings.Split(redisAddr, ",")       //支持多个地址,逗号分隔
-	sentinels := strings.Split(redisSentinel, ",") //支持多个地址,逗号分隔
-	if Redis, e = zredis.InitZRedis(servers, sentinels, redisPwd, redisDB, redisMTag); e != nil {
-		//panic(e)
-		w.Error("localstorage unreachable: %s", e)
+	if cc = ogo.ClusterClient(); cc == nil {
+		w.Info("not found cluster, use redis")
+		var e error
+		servers := strings.Split(redisAddr, ",")       //支持多个地址,逗号分隔
+		sentinels := strings.Split(redisSentinel, ",") //支持多个地址,逗号分隔
+		if Redis, e = zredis.InitZRedis(servers, sentinels, redisPwd, redisDB, redisMTag); e != nil {
+			//panic(e)
+			w.Error("localstorage unreachable: %s", e)
+		}
+	} else {
+		w.Info("found cluster, gooood!")
 	}
 
 	// Socket to pub
