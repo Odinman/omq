@@ -205,8 +205,8 @@ func (ls *LocalStorage) Timing() (r []string, err error) {
 		} else {
 			r = make([]string, 0)
 			for _, rm := range rz {
-				r = append(r, rm.Member.(string))
-				cc.ZRem(ls.key, rm.Member.(string))
+				r = append(r, rm.Member)
+				cc.ZRem(ls.key, rm.Member)
 			}
 		}
 	} else {

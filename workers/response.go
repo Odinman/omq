@@ -102,6 +102,16 @@ func (w *OmqWorker) newResponser(i int) {
 						w.Debug("push %s failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error())
 					}
+				case COMMAND_BTASK: //阻塞任务队列命令
+					value := cmd[2:]
+					if err := mqpool.Push(key, value); err == nil {
+						w.Debug("push %s successful", key)
+						time.Sleep(10)
+						node.SendMessage(client, "", RESPONSE_OK)
+					} else {
+						w.Debug("push %s failed: %s", key, err)
+						node.SendMessage(client, "", RESPONSE_ERROR, err.Error())
+					}
 				case COMMAND_POP:
 					//cmd, _ := mqueuer.RecvMessage(0)
 					if value, err := mqpool.Pop(key); err == nil {

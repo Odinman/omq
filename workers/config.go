@@ -22,6 +22,7 @@ const (
 	COMMAND_DEL      = "DEL"
 	COMMAND_PUSH     = "PUSH"
 	COMMAND_TASK     = "TASK"
+	COMMAND_BTASK    = "BTASK" //阻塞任务
 	COMMAND_POP      = "POP"
 	COMMAND_SCHEDULE = "SCHEDULE" //定时任务
 	COMMAND_TIMING   = "TIMING"   //定时触发
