@@ -70,7 +70,7 @@ func (w *OmqWorker) newSubscriber() {
 				cycles++
 
 				//subscriber收到的信息应该是不包含信封的
-				w.Trace("recv msg: %s", msg)
+				w.Trace("recv msg: %q", msg)
 
 				// 存到本地存储(同步)
 				if err := w.localStorage(msg); err != nil {

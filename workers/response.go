@@ -1,9 +1,11 @@
 package workers
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
+	ogoutils "github.com/Odinman/ogo/utils"
 	"github.com/Odinman/omq/utils"
 	zmq "github.com/pebbe/zmq4"
 )
@@ -104,13 +106,41 @@ func (w *OmqWorker) newResponser(i int) {
 					}
 				case COMMAND_BTASK: //阻塞任务队列命令
 					value := cmd[2:]
+					taskId := ogoutils.NewShortUUID()
+					value = append([]string{taskId}, value...) //放前面
 					if err := mqpool.Push(key, value); err == nil {
-						w.Debug("push %s successful", key)
-						time.Sleep(10)
-						node.SendMessage(client, "", RESPONSE_OK)
+						w.Debug("push block task %s successful, task id: %s", key, taskId)
+						blockTasks[taskId] = make(chan int, 1)
+						bto := time.Tick(BTASK_TIMEOUT)
+						//go w.newBlocker(client)
+						select {
+						case <-bto: //超时
+							w.Info("waiting time out")
+							node.SendMessage(client, "", RESPONSE_ERROR)
+						case status := <-blockTasks[taskId]:
+							w.Debug("block task status: %q", status)
+							node.SendMessage(client, "", RESPONSE_OK)
+						}
 					} else {
 						w.Debug("push %s failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error())
+					}
+				case COMMAND_COMPLETE: // 完成阻塞任务
+					if len(cmd) > 3 {
+						if taskId := cmd[2]; taskId != "" {
+							if _, ok := blockTasks[taskId]; ok {
+								status, _ := strconv.Atoi(cmd[3])
+								blockTasks[taskId] <- status
+								//成功
+								node.SendMessage(client, "", RESPONSE_OK)
+							} else {
+								node.SendMessage(client, "", RESPONSE_ERROR)
+							}
+						} else {
+							node.SendMessage(client, "", RESPONSE_ERROR)
+						}
+					} else {
+						node.SendMessage(client, "", RESPONSE_ERROR)
 					}
 				case COMMAND_POP:
 					//cmd, _ := mqueuer.RecvMessage(0)
@@ -175,6 +205,26 @@ func (w *OmqWorker) newResponser(i int) {
 			node.Send(PPP_HEARTBEAT, 0)
 		default:
 		}
+	}
+}
+
+/* }}} */
+
+/* {{{ func (w *OmqWorker) newBlocker(client string)
+ * 异步阻塞节点
+ */
+func (w *OmqWorker) newBlocker(client string) {
+	//node, _ := w.connectQueue()
+	//w.Trace("block node for client: %q", client)
+
+	//  Send out heartbeats at regular intervals
+	heartbeat_at := time.Tick(5 * time.Second)
+
+	//  Send heartbeat to queue if it's time
+	select {
+	case <-heartbeat_at:
+		w.Debug("recv taskman response")
+		//node.SendMessage(client, "", "BTASK")
 	}
 }
 

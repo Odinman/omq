@@ -12,6 +12,7 @@ const (
 	HEARTBEAT_INTERVAL = 1000 * time.Millisecond  //  msecs
 	INTERVAL_INIT      = 1000 * time.Millisecond  //  Initial reconnect
 	INTERVAL_MAX       = 32000 * time.Millisecond //  After exponential backoff
+	BTASK_TIMEOUT      = 10 * time.Second
 
 	PPP_READY     = "\001" //  Signals worker is ready
 	PPP_HEARTBEAT = "\002" //  Signals worker heartbeat
@@ -22,7 +23,8 @@ const (
 	COMMAND_DEL      = "DEL"
 	COMMAND_PUSH     = "PUSH"
 	COMMAND_TASK     = "TASK"
-	COMMAND_BTASK    = "BTASK" //阻塞任务
+	COMMAND_BTASK    = "BTASK"    //阻塞任务
+	COMMAND_COMPLETE = "COMPLETE" //完成阻塞任务
 	COMMAND_POP      = "POP"
 	COMMAND_SCHEDULE = "SCHEDULE" //定时任务
 	COMMAND_TIMING   = "TIMING"   //定时触发
@@ -49,6 +51,8 @@ var (
 	responseNodes int // 回复节点的个数
 
 	ErrNil = errors.New(RESPONSE_NIL)
+
+	blockTasks map[string](chan int)
 )
 
 //get worker config from ogo
@@ -94,7 +98,7 @@ func (w *OmqWorker) getConfig() {
 	if rns, err := workerConfig.Int("responser_nodes"); err == nil {
 		responseNodes = rns
 	} else {
-		responseNodes = 10 // default is 10
+		responseNodes = 256 // default is 256
 	}
 
 	if mqb, err := workerConfig.Int("msgqueue_buffer"); err == nil {

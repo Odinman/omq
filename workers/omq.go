@@ -31,6 +31,9 @@ func (w *OmqWorker) Main() error {
 	//read config
 	w.getConfig()
 
+	// block tasks
+	blockTasks = make(map[string](chan int))
+
 	// connect local storage
 	if cc = ogo.ClusterClient(); cc == nil {
 		w.Info("not found cluster, use redis")

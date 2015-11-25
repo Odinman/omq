@@ -137,7 +137,7 @@ func (w *OmqWorker) serve() {
 					}
 				} else {
 					// 任务处理完毕的回复(带信封), 直接返回前台
-					w.Trace("backend recv: %s", msg)
+					w.Trace("backend recv: %q", msg)
 					frontend.SendMessage(msg)
 				}
 			case frontend:
@@ -147,10 +147,11 @@ func (w *OmqWorker) serve() {
 					w.Error("frontend wrong: %s", err)
 					break //  Interrupted
 				}
-				w.Trace("frontend recv: %s", msg)
+				w.Trace("frontend recv: %q", msg)
 
 				//定向发送到后台(带信封), 将来可以有多组后台, 分别处理不同的任务
 				backend.SendMessage(nodes[0].identity, msg)
+				w.Trace("send to backend: %q", nodes[0].identity)
 				nodes = nodes[1:]
 			}
 		}
