@@ -32,7 +32,7 @@ func (w *OmqWorker) Main() error {
 	w.getConfig()
 
 	// block tasks
-	blockTasks = make(map[string](chan int))
+	blockTasks = make(map[string](chan string))
 
 	// connect local storage
 	if cc = ogo.ClusterClient(); cc == nil {

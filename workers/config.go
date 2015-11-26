@@ -52,7 +52,7 @@ var (
 
 	ErrNil = errors.New(RESPONSE_NIL)
 
-	blockTasks map[string](chan int)
+	blockTasks map[string](chan string)
 )
 
 //get worker config from ogo

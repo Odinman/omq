@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"strconv"
 	"strings"
 	"time"
 
@@ -110,21 +109,18 @@ func (w *OmqWorker) newResponser(i int) {
 					value = append([]string{taskId}, value...) //放前面
 					if err := mqpool.Push(key, value); err == nil {
 						w.Debug("push block task %s successful, task id: %s", key, taskId)
-						blockTasks[taskId] = make(chan int, 1)
+						blockTasks[taskId] = make(chan string, 1)
 						bto := time.Tick(BTASK_TIMEOUT)
 						//go w.newBlocker(client)
 						select {
 						case <-bto: //超时
 							w.Info("waiting time out")
 							node.SendMessage(client, "", RESPONSE_ERROR)
-						case status := <-blockTasks[taskId]:
-							w.Debug("block task status: %d", status)
-							if status == 1 {
-								node.SendMessage(client, "", RESPONSE_OK)
-							} else {
-								node.SendMessage(client, "", RESPONSE_ERROR)
-							}
+						case result := <-blockTasks[taskId]:
+							w.Debug("block task result: %s", result)
+							node.SendMessage(client, "", RESPONSE_OK, result)
 						}
+						delete(blockTasks, taskId)
 					} else {
 						w.Debug("push %s failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error())
@@ -133,9 +129,7 @@ func (w *OmqWorker) newResponser(i int) {
 					if len(cmd) > 3 {
 						if taskId := cmd[2]; taskId != "" {
 							if _, ok := blockTasks[taskId]; ok {
-								status, _ := strconv.Atoi(cmd[3])
-								blockTasks[taskId] <- status
-								//成功
+								blockTasks[taskId] <- cmd[3]
 								node.SendMessage(client, "", RESPONSE_OK)
 							} else {
 								node.SendMessage(client, "", RESPONSE_ERROR)
