@@ -118,8 +118,12 @@ func (w *OmqWorker) newResponser(i int) {
 							w.Info("waiting time out")
 							node.SendMessage(client, "", RESPONSE_ERROR)
 						case status := <-blockTasks[taskId]:
-							w.Debug("block task status: %q", status)
-							node.SendMessage(client, "", RESPONSE_OK)
+							w.Debug("block task status: %d", status)
+							if status == 1 {
+								node.SendMessage(client, "", RESPONSE_OK)
+							} else {
+								node.SendMessage(client, "", RESPONSE_ERROR)
+							}
 						}
 					} else {
 						w.Debug("push %s failed: %s", key, err)
