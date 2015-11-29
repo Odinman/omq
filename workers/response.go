@@ -118,7 +118,11 @@ func (w *OmqWorker) newResponser(i int) {
 							node.SendMessage(client, "", RESPONSE_ERROR)
 						case result := <-blockTasks[taskId]:
 							w.Debug("block task result: %s", result)
-							node.SendMessage(client, "", RESPONSE_OK, result)
+							if result == "0" {
+								node.SendMessage(client, "", RESPONSE_ERROR)
+							} else {
+								node.SendMessage(client, "", RESPONSE_OK, result)
+							}
 						}
 						delete(blockTasks, taskId)
 					} else {
