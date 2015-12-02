@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -144,9 +145,15 @@ func (w *OmqWorker) newResponser(i int) {
 					} else {
 						node.SendMessage(client, "", RESPONSE_ERROR)
 					}
-				case COMMAND_POP:
-					//cmd, _ := mqueuer.RecvMessage(0)
-					if value, err := mqpool.Pop(key); err == nil {
+				case COMMAND_POP, COMMAND_BPOP: //pop或者阻塞式pop
+					bt := 0 * time.Second
+					if len(cmd) > 2 && act == COMMAND_BPOP {
+						if bs, _ := strconv.Atoi(cmd[2]); bs > 0 {
+							bt = time.Duration(bs) * time.Second
+							w.Debug("pop block dura: %s", bt)
+						}
+					}
+					if value, err := mqpool.Pop(key, bt); err == nil {
 						w.Debug("pop value from mqueue: %s", value)
 						node.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
 					} else if err.Error() == RESPONSE_NIL {

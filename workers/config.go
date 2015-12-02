@@ -26,6 +26,7 @@ const (
 	COMMAND_BTASK    = "BTASK"    //阻塞任务
 	COMMAND_COMPLETE = "COMPLETE" //完成阻塞任务
 	COMMAND_POP      = "POP"
+	COMMAND_BPOP     = "BPOP"
 	COMMAND_SCHEDULE = "SCHEDULE" //定时任务
 	COMMAND_TIMING   = "TIMING"   //定时触发
 
