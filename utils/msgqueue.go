@@ -158,7 +158,8 @@ func (m *MQPool) Push(k string, v []string) error {
  * 出栈
  */
 func (m *MQPool) Pop(k string, bt time.Duration) (v []string, err error) {
-	if q, err := m.Get(k); err == nil {
+	var q *MQ
+	if q, err = m.Get(k); err == nil {
 		//不存在队列就不新建了
 		//sockets, err := q.iPoller.Poll(HEARTBEAT_INTERVAL)
 		//sockets, err := q.iPoller.Poll(BLOCK_DURATION) //阻塞交给omq处理
@@ -182,6 +183,7 @@ func (m *MQPool) Pop(k string, bt time.Duration) (v []string, err error) {
 		} else {
 			select {
 			case v = <-q.Queue:
+				return v, nil
 			default:
 				err = errors.New("NIL")
 			}

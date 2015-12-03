@@ -109,7 +109,7 @@ func (w *OmqWorker) newResponser(i int) {
 					taskId := ogoutils.NewShortUUID()
 					value = append([]string{taskId}, value...) //放前面
 					if err := mqpool.Push(key, value); err == nil {
-						w.Debug("push block task %s successful, task id: %s", key, taskId)
+						w.Debug("push block task %s successful, task id: %s [%s]", key, taskId, time.Now())
 						blockTasks[taskId] = make(chan string, 1)
 						bto := time.Tick(BTASK_TIMEOUT)
 						//go w.newBlocker(client)
@@ -118,7 +118,7 @@ func (w *OmqWorker) newResponser(i int) {
 							w.Info("waiting time out")
 							node.SendMessage(client, "", RESPONSE_ERROR)
 						case result := <-blockTasks[taskId]:
-							w.Debug("block task result: %s", result)
+							w.Debug("block task result: %s [%s]", result, time.Now())
 							if result == "0" {
 								node.SendMessage(client, "", RESPONSE_ERROR)
 							} else {
@@ -150,17 +150,17 @@ func (w *OmqWorker) newResponser(i int) {
 					if len(cmd) > 2 && act == COMMAND_BPOP {
 						if bs, _ := strconv.Atoi(cmd[2]); bs > 0 {
 							bt = time.Duration(bs) * time.Second
-							w.Debug("pop block dura: %s", bt)
+							w.Trace("pop block dura: %s", bt)
 						}
 					}
 					if value, err := mqpool.Pop(key, bt); err == nil {
-						w.Debug("pop value from mqueue: %s", value)
+						w.Debug("pop %s: %s [%s]", key, value, time.Now())
 						node.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
 					} else if err.Error() == RESPONSE_NIL {
 						w.Trace("pop %s nil: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_NIL) //没有内容,返回空
 					} else {
-						w.Trace("pop %s from mqueue failed: %s", key, err)
+						w.Trace("pop %s failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error()) //回复REQ,因此要加上一个空帧
 					}
 				default:
