@@ -1,4 +1,4 @@
-package workers
+package modules
 
 import (
 	"fmt"
@@ -64,10 +64,10 @@ func purgeNodes(nodes []Node) []Node {
 
 /* }}} */
 
-/* {{{ func (w *OmqWorker) serve() {
+/* {{{ func (w *OMQ) serve() {
  *
  */
-func (w *OmqWorker) serve() {
+func (w *OMQ) serve() {
 	//  接受请求的socket
 	frontend, _ := zmq.NewSocket(zmq.ROUTER)
 	defer frontend.Close()

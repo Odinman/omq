@@ -1,4 +1,4 @@
-package workers
+package modules
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"gopkg.in/redis.v3"
 )
 
-type OmqWorker struct {
+type OMQ struct {
 	ogo.Worker
 }
 
@@ -24,10 +24,10 @@ var (
 )
 
 func init() {
-	ogo.AddWorker(&OmqWorker{})
+	ogo.AddWorker(&OMQ{})
 }
 
-func (w *OmqWorker) Main() error {
+func (w *OMQ) Main() error {
 	//read config
 	w.getConfig()
 

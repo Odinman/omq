@@ -1,4 +1,4 @@
-package workers
+package modules
 
 import (
 	"encoding/json"
@@ -33,10 +33,10 @@ type LocalStorage struct {
 	ts     int
 }
 
-/* {{{ func (w *OmqWorker) localStorage(cmd []string) error
+/* {{{ func (w *OMQ) localStorage(cmd []string) error
  * 处理SET/DEL命令
  */
-func (w *OmqWorker) localStorage(cmd []string) error { //set + del
+func (w *OMQ) localStorage(cmd []string) error { //set + del
 
 	if cc == nil && Redis == nil { //没有本地存储
 		return fmt.Errorf("can't reach localstorage")
@@ -93,10 +93,10 @@ func (w *OmqWorker) localStorage(cmd []string) error { //set + del
 
 /* }}} */
 
-/* {{{ func (w *OmqWorker) localGet(cmd []string) ([]string, error)
+/* {{{ func (w *OMQ) localGet(cmd []string) ([]string, error)
  * 处理SET/DEL命令
  */
-func (w *OmqWorker) localGet(cmd []string) (r []string, err error) { //set + del
+func (w *OMQ) localGet(cmd []string) (r []string, err error) { //set + del
 
 	if cc == nil && Redis == nil { //没有本地存储
 		err = fmt.Errorf("can't reach localstorage")

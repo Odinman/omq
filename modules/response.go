@@ -1,4 +1,4 @@
-package workers
+package modules
 
 import (
 	"strconv"
@@ -14,7 +14,7 @@ import (
  *  Helper function that returns a new configured socket
  *  connected to the Paranoid Pirate queue
  */
-func (w *OmqWorker) connectQueue() (*zmq.Socket, *zmq.Poller) {
+func (w *OMQ) connectQueue() (*zmq.Socket, *zmq.Poller) {
 	soc, _ := zmq.NewSocket(zmq.DEALER)
 	soc.Connect("inproc://backend")
 
@@ -29,10 +29,10 @@ func (w *OmqWorker) connectQueue() (*zmq.Socket, *zmq.Poller) {
 
 /* }}} */
 
-/* {{{ func (w *OmqWorker) newResponser(i int)
+/* {{{ func (w *OMQ) newResponser(i int)
  * 回复节点
  */
-func (w *OmqWorker) newResponser(i int) {
+func (w *OMQ) newResponser(i int) {
 	node, poller := w.connectQueue()
 	w.Trace("%d node ready", i)
 
@@ -219,10 +219,10 @@ func (w *OmqWorker) newResponser(i int) {
 
 /* }}} */
 
-/* {{{ func (w *OmqWorker) newBlocker(client string)
+/* {{{ func (w *OMQ) newBlocker(client string)
  * 异步阻塞节点
  */
-func (w *OmqWorker) newBlocker(client string) {
+func (w *OMQ) newBlocker(client string) {
 	//node, _ := w.connectQueue()
 	//w.Trace("block node for client: %q", client)
 

@@ -1,4 +1,4 @@
-package workers
+package modules
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
  *  Helper function that returns a new configured socket
  *  connected to the Paranoid Pirate queue
  */
-func (w *OmqWorker) connectPub() (*zmq.Socket, *zmq.Poller) {
+func (w *OMQ) connectPub() (*zmq.Socket, *zmq.Poller) {
 	soc, _ := zmq.NewSocket(zmq.SUB)
 
 	//get identity
@@ -34,10 +34,10 @@ func (w *OmqWorker) connectPub() (*zmq.Socket, *zmq.Poller) {
 
 /* }}} */
 
-/* {{{ func (w *OmqWorker) newSubscriber()
+/* {{{ func (w *OMQ) newSubscriber()
  * 订阅者, 订阅其他机房的信息
  */
-func (w *OmqWorker) newSubscriber() {
+func (w *OMQ) newSubscriber() {
 
 	subscriber, poller := w.connectPub()
 

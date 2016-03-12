@@ -1,4 +1,4 @@
-package workers
+package modules
 
 import (
 	"errors"
@@ -57,7 +57,7 @@ var (
 )
 
 //get worker config from ogo
-func (w *OmqWorker) getConfig() {
+func (w *OMQ) getConfig() {
 	workerConfig := ogo.Config()
 	//base port
 	if port, err := workerConfig.Int("base_port"); err == nil {
