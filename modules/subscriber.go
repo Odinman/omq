@@ -12,7 +12,7 @@ import (
  *  Helper function that returns a new configured socket
  *  connected to the Paranoid Pirate queue
  */
-func (w *OMQ) connectPub() (*zmq.Socket, *zmq.Poller) {
+func (o *OMQ) connectPub() (*zmq.Socket, *zmq.Poller) {
 	soc, _ := zmq.NewSocket(zmq.SUB)
 
 	//get identity
@@ -24,7 +24,7 @@ func (w *OMQ) connectPub() (*zmq.Socket, *zmq.Poller) {
 
 	remotePub := fmt.Sprint("tcp://", pubAddr, ":", remotePort+1)
 	soc.Connect(remotePub)
-	w.Debug("identity(%s) connect remote pub: %v", identity, remotePub)
+	o.Debug("identity(%s) connect remote pub: %v", identity, remotePub)
 
 	poller := zmq.NewPoller()
 	poller.Add(soc, zmq.POLLIN)
@@ -34,12 +34,12 @@ func (w *OMQ) connectPub() (*zmq.Socket, *zmq.Poller) {
 
 /* }}} */
 
-/* {{{ func (w *OMQ) newSubscriber()
+/* {{{ func (o *OMQ) newSubscriber()
  * 订阅者, 订阅其他机房的信息
  */
-func (w *OMQ) newSubscriber() {
+func (o *OMQ) newSubscriber() {
 
-	subscriber, poller := w.connectPub()
+	subscriber, poller := o.connectPub()
 
 	//  If liveness hits zero, queue is considered disconnected
 	liveness := HEARTBEAT_LIVENESS
@@ -52,7 +52,7 @@ func (w *OMQ) newSubscriber() {
 	for cycles := 0; true; {
 		sockets, err := poller.Poll(HEARTBEAT_INTERVAL)
 		if err != nil {
-			w.Error("sub error: %s", err)
+			o.Error("sub error: %s", err)
 			break //  Interrupted
 		}
 
@@ -62,7 +62,7 @@ func (w *OMQ) newSubscriber() {
 			//  - 1-part HEARTBEAT -> heartbeat
 			msg, err := subscriber.RecvMessage(0)
 			if err != nil {
-				w.Error("recv error: %s", err)
+				o.Error("recv error: %s", err)
 				break //  Interrupted
 			}
 
@@ -70,11 +70,11 @@ func (w *OMQ) newSubscriber() {
 				cycles++
 
 				//subscriber收到的信息应该是不包含信封的
-				w.Trace("recv msg: %q", msg)
+				o.Trace("recv msg: %q", msg)
 
 				// 存到本地存储(同步)
-				if err := w.localStorage(msg); err != nil {
-					w.Debug("error: %s", err)
+				if err := o.localStorage(msg); err != nil {
+					o.Debug("error: %s", err)
 				}
 
 				liveness = HEARTBEAT_LIVENESS
@@ -82,13 +82,13 @@ func (w *OMQ) newSubscriber() {
 				//  When we get a heartbeat message from the queue, it means the
 				//  queue was (recently) alive, so reset our liveness indicator:
 				if msg[0] == PPP_HEARTBEAT {
-					w.Trace("recv heartbeat, refresh liveness")
+					o.Trace("recv heartbeat, refresh liveness")
 					liveness = HEARTBEAT_LIVENESS
 				} else {
-					w.Debug("Error: invalid message, %q", msg)
+					o.Debug("Error: invalid message, %q", msg)
 				}
 			} else {
-				w.Debug("E: invalid message: %q", msg)
+				o.Debug("E: invalid message: %q", msg)
 			}
 			interval = INTERVAL_INIT
 		} else {
@@ -97,14 +97,14 @@ func (w *OMQ) newSubscriber() {
 			//  discarding any messages we might have sent in the meantime://
 			liveness--
 			if liveness == 0 {
-				w.Error("W: heartbeat failure, can't reach pub, reconnecting in %s", interval)
+				o.Error("W: heartbeat failure, can't reach pub, reconnecting in %s", interval)
 				time.Sleep(interval)
 
 				if interval < INTERVAL_MAX { //每次重试都加大重试间隔
 					interval = 2 * interval
 				}
 				// reconnect
-				subscriber, poller = w.connectPub()
+				subscriber, poller = o.connectPub()
 				liveness = HEARTBEAT_LIVENESS
 			}
 		}
@@ -112,7 +112,7 @@ func (w *OMQ) newSubscriber() {
 		select {
 		case <-heartbeat_at:
 			if cycles > lastCycles {
-				w.Debug("subscriber worked cycles: %d", cycles)
+				o.Debug("subscriber worked cycles: %d", cycles)
 				lastCycles = cycles
 			}
 		default:

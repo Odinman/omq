@@ -14,7 +14,7 @@ import (
  *  Helper function that returns a new configured socket
  *  connected to the Paranoid Pirate queue
  */
-func (w *OMQ) connectQueue() (*zmq.Socket, *zmq.Poller) {
+func (o *OMQ) connectQueue() (*zmq.Socket, *zmq.Poller) {
 	soc, _ := zmq.NewSocket(zmq.DEALER)
 	soc.Connect("inproc://backend")
 
@@ -29,12 +29,12 @@ func (w *OMQ) connectQueue() (*zmq.Socket, *zmq.Poller) {
 
 /* }}} */
 
-/* {{{ func (w *OMQ) newResponser(i int)
+/* {{{ func (o *OMQ) newResponser(i int)
  * 回复节点
  */
-func (w *OMQ) newResponser(i int) {
-	node, poller := w.connectQueue()
-	w.Trace("%d node ready", i)
+func (o *OMQ) newResponser(i int) {
+	node, poller := o.connectQueue()
+	o.Trace("%d node ready", i)
 
 	//  If liveness hits zero, queue is considered disconnected
 	liveness := HEARTBEAT_LIVENESS
@@ -47,7 +47,7 @@ func (w *OMQ) newResponser(i int) {
 	for cycles := 0; true; {
 		sockets, err := poller.Poll(HEARTBEAT_INTERVAL)
 		if err != nil {
-			w.Error("polling error: %s", err)
+			o.Error("polling error: %s", err)
 			break //  Interrupted
 		}
 
@@ -57,7 +57,7 @@ func (w *OMQ) newResponser(i int) {
 			//  - 1-part HEARTBEAT -> heartbeat
 			msg, err := node.RecvMessage(0)
 			if err != nil {
-				w.Error("recv error: %s", err)
+				o.Error("recv error: %s", err)
 				break //  Interrupted
 			}
 
@@ -65,28 +65,28 @@ func (w *OMQ) newResponser(i int) {
 			if len(msg) >= 4 { //命令应该大于5帧(包含信封以及空帧)
 				cycles++
 
-				w.Trace("recv cmd: %s, from client: %q", cmd, client)
+				o.Trace("recv cmd: %s, from client: %q", cmd, client)
 
 				act := strings.ToUpper(cmd[0])
 				key := cmd[1]
 				switch act {
 				case COMMAND_GET, COMMAND_TIMING: //获取key内容
-					if r, err := w.localGet(cmd); err != nil {
-						w.Debug("error: %s", err)
+					if r, err := o.localGet(cmd); err != nil {
+						o.Debug("error: %s", err)
 						if err == ErrNil {
 							node.SendMessage(client, "", RESPONSE_NIL) //没有内容,返回空
 						} else {
 							node.SendMessage(client, "", RESPONSE_ERROR, err.Error()) //回复REQ,因此要加上一个空帧
 						}
 					} else {
-						w.Trace("response: %s, len: %d", r, len(r))
+						o.Trace("response: %s, len: %d", r, len(r))
 						node.SendMessage(client, "", RESPONSE_OK, r) //回复REQ,因此要加上一个空帧
 					}
 				case COMMAND_SET, COMMAND_DEL, COMMAND_SCHEDULE: //key-value命令
 					// 存到本地存储(同步)
 					//回复结果(带信封, 否则找不到发送者), 因为是异步的, 可以先回复, 再做事
-					if err := w.localStorage(cmd); err != nil {
-						w.Debug("error: %s", err)
+					if err := o.localStorage(cmd); err != nil {
+						o.Debug("error: %s", err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error()) //回复REQ,因此要加上一个空帧
 					} else {
 						node.SendMessage(client, "", RESPONSE_OK) //回复REQ,因此要加上一个空帧
@@ -98,10 +98,10 @@ func (w *OMQ) newResponser(i int) {
 				case COMMAND_PUSH, COMMAND_TASK: //任务队列命令
 					value := cmd[2:]
 					if err := mqpool.Push(key, value); err == nil {
-						w.Debug("push %s successful", key)
+						o.Debug("push %s successful", key)
 						node.SendMessage(client, "", RESPONSE_OK)
 					} else {
-						w.Debug("push %s failed: %s", key, err)
+						o.Debug("push %s failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error())
 					}
 				case COMMAND_BTASK: //阻塞任务队列命令
@@ -109,16 +109,15 @@ func (w *OMQ) newResponser(i int) {
 					taskId := ogoutils.NewShortUUID()
 					value = append([]string{taskId}, value...) //放前面
 					if err := mqpool.Push(key, value); err == nil {
-						w.Debug("push block task %s successful, task id: %s [%s]", key, taskId, time.Now())
+						o.Debug("push block task %s successful, task id: %s [%s]", key, taskId, time.Now())
 						blockTasks[taskId] = make(chan string, 1)
 						bto := time.Tick(BTASK_TIMEOUT)
-						//go w.newBlocker(client)
 						select {
 						case <-bto: //超时
-							w.Info("waiting time out")
+							o.Info("waiting time out")
 							node.SendMessage(client, "", RESPONSE_ERROR)
 						case result := <-blockTasks[taskId]:
-							w.Debug("block task result: %s [%s]", result, time.Now())
+							o.Debug("block task result: %s [%s]", result, time.Now())
 							if result == "0" {
 								node.SendMessage(client, "", RESPONSE_ERROR)
 							} else {
@@ -127,7 +126,7 @@ func (w *OMQ) newResponser(i int) {
 						}
 						delete(blockTasks, taskId)
 					} else {
-						w.Debug("push %s failed: %s", key, err)
+						o.Debug("push %s failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error())
 					}
 				case COMMAND_COMPLETE: // 完成阻塞任务
@@ -150,22 +149,22 @@ func (w *OMQ) newResponser(i int) {
 					if len(cmd) > 2 && act == COMMAND_BPOP {
 						if bs, _ := strconv.Atoi(cmd[2]); bs > 0 {
 							bt = time.Duration(bs) * time.Second
-							w.Trace("pop block dura: %s", bt)
+							o.Trace("pop block dura: %s", bt)
 						}
 					}
 					if value, err := mqpool.Pop(key, bt); err == nil {
-						w.Debug("pop %s: %s [%s]", key, value, time.Now())
+						o.Debug("pop %s: %s [%s]", key, value, time.Now())
 						node.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
 					} else if err.Error() == RESPONSE_NIL {
-						w.Trace("pop %s nil: %s", key, err)
+						o.Trace("pop %s nil: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_NIL) //没有内容,返回空
 					} else {
-						w.Trace("pop %s failed: %s", key, err)
+						o.Trace("pop %s failed: %s", key, err)
 						node.SendMessage(client, "", RESPONSE_ERROR, err.Error()) //回复REQ,因此要加上一个空帧
 					}
 				default:
 					// unknown action
-					w.Info("unkown action: %s", act)
+					o.Info("unkown action: %s", act)
 					node.SendMessage(client, "", RESPONSE_UNKNOWN)
 				}
 
@@ -177,11 +176,11 @@ func (w *OMQ) newResponser(i int) {
 				if msg[0] == PPP_HEARTBEAT {
 					liveness = HEARTBEAT_LIVENESS
 				} else {
-					w.Info("invalid message: %q", msg)
+					o.Info("invalid message: %q", msg)
 					node.SendMessage(client, "", RESPONSE_UNKNOWN)
 				}
 			} else {
-				w.Info("invalid message: %q", msg)
+				o.Info("invalid message: %q", msg)
 				node.SendMessage(client, "", RESPONSE_UNKNOWN)
 			}
 			interval = INTERVAL_INIT
@@ -191,7 +190,7 @@ func (w *OMQ) newResponser(i int) {
 			//  discarding any messages we might have sent in the meantime://
 			liveness--
 			if liveness == 0 {
-				w.Debug("W: heartbeat failure, can't reach queue, reconnecting in %s", interval)
+				o.Debug("W: heartbeat failure, can't reach queue, reconnecting in %s", interval)
 
 				time.Sleep(interval)
 
@@ -199,7 +198,7 @@ func (w *OMQ) newResponser(i int) {
 					interval = 2 * interval
 				}
 				// reconnect
-				node, poller = w.connectQueue()
+				node, poller = o.connectQueue()
 				liveness = HEARTBEAT_LIVENESS
 			}
 		}
@@ -208,32 +207,12 @@ func (w *OMQ) newResponser(i int) {
 		select {
 		case <-heartbeat_at:
 			if cycles > lastCycles {
-				w.Trace("node%d worked cycles: %d", i, cycles)
+				o.Trace("node%d worked cycles: %d", i, cycles)
 				lastCycles = cycles
 			}
 			node.Send(PPP_HEARTBEAT, 0)
 		default:
 		}
-	}
-}
-
-/* }}} */
-
-/* {{{ func (w *OMQ) newBlocker(client string)
- * 异步阻塞节点
- */
-func (w *OMQ) newBlocker(client string) {
-	//node, _ := w.connectQueue()
-	//w.Trace("block node for client: %q", client)
-
-	//  Send out heartbeats at regular intervals
-	heartbeat_at := time.Tick(5 * time.Second)
-
-	//  Send heartbeat to queue if it's time
-	select {
-	case <-heartbeat_at:
-		w.Debug("recv taskman response")
-		//node.SendMessage(client, "", "BTASK")
 	}
 }
 

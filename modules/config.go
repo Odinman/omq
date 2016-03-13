@@ -57,7 +57,7 @@ var (
 )
 
 //get worker config from ogo
-func (w *OMQ) getConfig() {
+func (o *OMQ) getConfig() {
 	workerConfig := ogo.Config()
 	//base port
 	if port, err := workerConfig.Int("base_port"); err == nil {

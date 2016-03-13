@@ -33,15 +33,15 @@ type LocalStorage struct {
 	ts     int
 }
 
-/* {{{ func (w *OMQ) localStorage(cmd []string) error
+/* {{{ func (o *OMQ) localStorage(cmd []string) error
  * 处理SET/DEL命令
  */
-func (w *OMQ) localStorage(cmd []string) error { //set + del
+func (o *OMQ) localStorage(cmd []string) error { //set + del
 
 	if cc == nil && Redis == nil { //没有本地存储
 		return fmt.Errorf("can't reach localstorage")
 	} else {
-		w.Trace("save local storage: %q", cmd)
+		o.Trace("save local storage: %q", cmd)
 	}
 
 	// 解析命令
@@ -55,24 +55,24 @@ func (w *OMQ) localStorage(cmd []string) error { //set + del
 			ls.option = &StorageOption{Type: _STORAGE_REDIS}
 		} else {
 			//解析
-			o := new(StorageOption)
-			if err := json.Unmarshal([]byte(option), o); err != nil {
-				w.Info("unmarshal option failed: %s", option)
+			so := new(StorageOption)
+			if err := json.Unmarshal([]byte(option), so); err != nil {
+				o.Info("unmarshal option failed: %s", option)
 				ls.option = &StorageOption{Type: _STORAGE_REDIS} //默认
 			} else {
-				ls.option = o
+				ls.option = so
 			}
 		}
 		if len(cmd) >= 4 {
 			ls.value = cmd[3]
 		}
-		w.Trace("[act: %s][key: %s][value: %s]", act, ls.key, ls.value)
+		o.Trace("[act: %s][key: %s][value: %s]", act, ls.key, ls.value)
 		switch act {
 		case COMMAND_SET:
 			if len(cmd) >= 5 {
 				ls.expire, _ = strconv.Atoi(cmd[4])
 			}
-			w.Trace("expire: %d", ls.expire)
+			o.Trace("expire: %d", ls.expire)
 			return ls.Set()
 		case COMMAND_DEL:
 			return ls.Del()
@@ -93,16 +93,16 @@ func (w *OMQ) localStorage(cmd []string) error { //set + del
 
 /* }}} */
 
-/* {{{ func (w *OMQ) localGet(cmd []string) ([]string, error)
+/* {{{ func (o *OMQ) localGet(cmd []string) ([]string, error)
  * 处理SET/DEL命令
  */
-func (w *OMQ) localGet(cmd []string) (r []string, err error) { //set + del
+func (o *OMQ) localGet(cmd []string) (r []string, err error) { //set + del
 
 	if cc == nil && Redis == nil { //没有本地存储
 		err = fmt.Errorf("can't reach localstorage")
 		return
 	} else {
-		w.Trace("save local storage: %q", cmd)
+		o.Trace("save local storage: %q", cmd)
 	}
 
 	// 解析命令
@@ -116,15 +116,15 @@ func (w *OMQ) localGet(cmd []string) (r []string, err error) { //set + del
 			ls.option = &StorageOption{Type: _STORAGE_REDIS}
 		} else {
 			//解析
-			o := new(StorageOption)
-			if err := json.Unmarshal([]byte(option), o); err != nil {
-				w.Info("unmarshal option failed: %s", option)
+			so := new(StorageOption)
+			if err := json.Unmarshal([]byte(option), so); err != nil {
+				o.Info("unmarshal option failed: %s", option)
 				ls.option = &StorageOption{Type: _STORAGE_REDIS} //默认
 			} else {
-				ls.option = o
+				ls.option = so
 			}
 		}
-		w.Trace("[act: %s][key: %s]", act, ls.key)
+		o.Trace("[act: %s][key: %s]", act, ls.key)
 		switch act {
 		case COMMAND_GET:
 			return ls.Get()
