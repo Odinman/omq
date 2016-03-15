@@ -2,7 +2,6 @@ package modules
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Odinman/goutils/zredis"
 	"github.com/Odinman/ogo"
@@ -35,14 +34,7 @@ func (o *OMQ) Main() error {
 
 	// connect local storage
 	if cc = ogo.ClusterClient(); cc == nil {
-		o.Info("not found cluster, use redis")
-		var e error
-		servers := strings.Split(redisAddr, ",")       //支持多个地址,逗号分隔
-		sentinels := strings.Split(redisSentinel, ",") //支持多个地址,逗号分隔
-		if Redis, e = zredis.InitZRedis(servers, sentinels, redisPwd, redisDB, redisMTag); e != nil {
-			//panic(e)
-			o.Error("localstorage unreachable: %s", e)
-		}
+		o.Error("localstorage unreachable")
 	} else {
 		o.Info("found cluster, gooood!")
 	}
@@ -61,7 +53,10 @@ func (o *OMQ) Main() error {
 		go o.newSubscriber()
 	}
 
-	o.serve()
+	// create job workers & dispatcher
+	dp := NewDispatcher(1024)
+	dp.Run()
 
-	return nil
+	server, _ := NewZSocket("ROUTER", 50000, fmt.Sprint("tcp://*:", basePort), "")
+	return o.serve(server)
 }
