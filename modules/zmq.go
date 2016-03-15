@@ -13,7 +13,7 @@ import (
 type ZSocket struct {
 	socket *zmq.Socket
 	poller *zmq.Poller
-	mu     sync.Mutex
+	mu     sync.RWMutex
 	hwm    int
 	bind   string
 	conn   string
@@ -79,9 +79,10 @@ func (zs *ZSocket) Close() (err error) {
  *
  */
 func (zs *ZSocket) Accept() (msg []string, err error) {
-	zs.mu.Lock()
-	defer zs.mu.Unlock()
-	if sockets, e := zs.poller.Poll(2500 * time.Millisecond); e != nil {
+	zs.mu.RLock()
+	defer zs.mu.RUnlock()
+	//if sockets, e := zs.poller.Poll(2500 * time.Millisecond); e != nil {
+	if sockets, e := zs.poller.Poll(0 * time.Millisecond); e != nil {
 		err = fmt.Errorf("big wrong: %s", e)
 	} else if len(sockets) > 0 {
 		return zs.socket.RecvMessage(0)

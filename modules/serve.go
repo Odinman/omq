@@ -10,8 +10,9 @@ func (o *OMQ) serve(s *ZSocket) error {
 
 	// loop
 	for {
-		if msg, err := s.Accept(); err == nil {
-			o.Debug("recv msg: [%s]", msg)
+		if msg, err := s.Accept(); err == nil && len(msg) > 0 {
+			//o.Debug("[serve] recv msg: [%s]", msg)
+			JobQueue <- Job{Request: msg, Conn: s}
 		}
 	}
 }

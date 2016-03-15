@@ -31,6 +31,7 @@ func (o *OMQ) Main() error {
 
 	// block tasks
 	blockTasks = make(map[string](chan string))
+	JobQueue = make(chan Job)
 
 	// connect local storage
 	if cc = ogo.ClusterClient(); cc == nil {
@@ -53,9 +54,9 @@ func (o *OMQ) Main() error {
 		go o.newSubscriber()
 	}
 
-	// create job workers & dispatcher
-	dp := NewDispatcher(1024)
-	dp.Run()
+	// create worker pool
+	wp := NewWorkerPool(3, o.response)
+	wp.Run()
 
 	server, _ := NewZSocket("ROUTER", 50000, fmt.Sprint("tcp://*:", basePort), "")
 	return o.serve(server)
