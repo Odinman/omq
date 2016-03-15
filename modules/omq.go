@@ -11,6 +11,8 @@ import (
 )
 
 type OMQ struct {
+	Server       *ZSocket
+	ResponsePool *WorkerPool
 	ogo.Worker
 }
 
@@ -31,7 +33,6 @@ func (o *OMQ) Main() error {
 
 	// block tasks
 	blockTasks = make(map[string](chan string))
-	JobQueue = make(chan Job)
 
 	// connect local storage
 	if cc = ogo.ClusterClient(); cc == nil {
@@ -54,10 +55,10 @@ func (o *OMQ) Main() error {
 		go o.newSubscriber()
 	}
 
-	// create worker pool
-	wp := NewWorkerPool(3, o.response)
-	wp.Run()
+	// create response pool
+	o.ResponsePool = NewWorkerPool(responseNodes, o.response)
+	o.ResponsePool.Run()
 
-	server, _ := NewZSocket("ROUTER", 50000, fmt.Sprint("tcp://*:", basePort), "")
-	return o.serve(server)
+	o.Server, _ = NewZSocket("ROUTER", 50000, fmt.Sprint("tcp://*:", basePort), "")
+	return o.serve()
 }

@@ -99,7 +99,7 @@ func (o *OMQ) getConfig() {
 	if rns, err := workerConfig.Int("responser_nodes"); err == nil {
 		responseNodes = rns
 	} else {
-		responseNodes = 256 // default is 256
+		responseNodes = 1024 // default is 1024
 	}
 
 	if mqb, err := workerConfig.Int("msgqueue_buffer"); err == nil {

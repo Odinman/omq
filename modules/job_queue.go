@@ -9,8 +9,6 @@ type Job struct {
 	Conn    *ZSocket
 }
 
-var JobQueue chan Job
-
 type JobFunc func(j Job)
 
 type JobWorker struct {
@@ -78,6 +76,7 @@ func (jw *JobWorker) Stop() {
 
 type WorkerPool struct {
 	// A pool of workers channels that are registered with the dispatcher
+	Queue   chan Job
 	pool    chan chan Job
 	max     int
 	handler JobFunc
@@ -88,7 +87,9 @@ type WorkerPool struct {
  */
 func NewWorkerPool(maxWorkers int, jf JobFunc) *WorkerPool {
 	pool := make(chan chan Job, maxWorkers)
+	queue := make(chan Job)
 	return &WorkerPool{
+		Queue:   queue,
 		pool:    pool,
 		max:     maxWorkers,
 		handler: jf,
@@ -118,7 +119,7 @@ func (wp *WorkerPool) Run() {
 func (wp *WorkerPool) dispatch() {
 	for {
 		select {
-		case job := <-JobQueue:
+		case job := <-wp.Queue:
 			//ogo.Debug("[dispatch] recv job: %s", job)
 			// a job request has been received
 			go func(job Job) {
