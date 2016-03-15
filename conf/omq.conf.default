@@ -1,11 +1,11 @@
 ;Daemonize=true
 
-base_port=7000
+base_port=9719
 
-;debuglevel=5
+debuglevel=1
 
 redis_addr= "127.0.0.1:6379"
 redis_db="2"
 
-remote_port=8000
+;remote_port=8000
 ;remote_publisher="127.0.0.1"
