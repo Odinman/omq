@@ -1,13 +1,21 @@
 package modules
 
-import ()
+import (
+	"fmt"
+)
 
 /* {{{ func (o *OMQ) serve() error {
  *
  */
 func (o *OMQ) serve() error {
-	s := o.Server
+	// create response pool
+	o.ResponsePool = NewWorkerPool(responseNodes, o.response)
+	o.ResponsePool.Run()
+
+	s, _ := NewZSocket("ROUTER", 50000, fmt.Sprint("tcp://*:", basePort), "")
 	defer s.Close()
+
+	o.Server = s
 
 	// loop
 	for {

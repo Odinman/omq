@@ -55,10 +55,5 @@ func (o *OMQ) Main() error {
 		go o.newSubscriber()
 	}
 
-	// create response pool
-	o.ResponsePool = NewWorkerPool(responseNodes, o.response)
-	o.ResponsePool.Run()
-
-	o.Server, _ = NewZSocket("ROUTER", 50000, fmt.Sprint("tcp://*:", basePort), "")
 	return o.serve()
 }
