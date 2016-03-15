@@ -52,8 +52,6 @@ var (
 	responseNodes int // 回复节点的个数
 
 	ErrNil = errors.New(RESPONSE_NIL)
-
-	blockTasks map[string](chan string)
 )
 
 //get worker config from ogo

@@ -76,7 +76,7 @@ func (jw *JobWorker) Stop() {
 
 type WorkerPool struct {
 	// A pool of workers channels that are registered with the dispatcher
-	Queue   chan Job
+	queue   chan Job
 	pool    chan chan Job
 	max     int
 	handler JobFunc
@@ -89,7 +89,7 @@ func NewWorkerPool(maxWorkers int, jf JobFunc) *WorkerPool {
 	pool := make(chan chan Job, maxWorkers)
 	queue := make(chan Job)
 	return &WorkerPool{
-		Queue:   queue,
+		queue:   queue,
 		pool:    pool,
 		max:     maxWorkers,
 		handler: jf,
@@ -119,7 +119,7 @@ func (wp *WorkerPool) Run() {
 func (wp *WorkerPool) dispatch() {
 	for {
 		select {
-		case job := <-wp.Queue:
+		case job := <-wp.queue:
 			//ogo.Debug("[dispatch] recv job: %s", job)
 			// a job request has been received
 			go func(job Job) {

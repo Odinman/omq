@@ -38,7 +38,7 @@ type LocalStorage struct {
  */
 func (o *OMQ) localStorage(cmd []string) error { //set + del
 
-	if cc == nil && Redis == nil { //没有本地存储
+	if cc == nil { //没有本地存储
 		return fmt.Errorf("can't reach localstorage")
 	} else {
 		o.Trace("save local storage: %q", cmd)
@@ -98,7 +98,7 @@ func (o *OMQ) localStorage(cmd []string) error { //set + del
  */
 func (o *OMQ) localGet(cmd []string) (r []string, err error) { //set + del
 
-	if cc == nil && Redis == nil { //没有本地存储
+	if cc == nil { //没有本地存储
 		err = fmt.Errorf("can't reach localstorage")
 		return
 	} else {
@@ -149,13 +149,7 @@ func (ls *LocalStorage) Set() (err error) {
 	if cc != nil { // use cluster
 		err = cc.Set(ls.key, ls.value, time.Duration(ls.expire)*time.Second).Err()
 	} else {
-		redisConn := Redis.Pool.Get()
-		defer redisConn.Close()
-		if ls.expire > 0 {
-			_, err = redisConn.Do("SET", ls.key, ls.value, "EX", ls.expire)
-		} else {
-			_, err = redisConn.Do("SET", ls.key, ls.value)
-		}
+		err = fmt.Errorf("not found localstorage")
 	}
 	return
 }
@@ -174,20 +168,7 @@ func (ls *LocalStorage) Get() (r []string, err error) {
 			r = []string{rs}
 		}
 	} else {
-		redisConn := Redis.Pool.Get()
-		defer redisConn.Close()
-		if result, e := redisConn.Do("GET", ls.key); e == nil {
-			if result == nil {
-				return nil, ErrNil
-			} else {
-				if len(result.([]byte)) == 0 {
-					return nil, ErrNil
-				}
-				r = []string{string(result.([]byte))}
-			}
-		} else {
-			err = e
-		}
+		err = fmt.Errorf("not found localstorage")
 	}
 	return
 }
@@ -210,43 +191,7 @@ func (ls *LocalStorage) Timing() (r []string, err error) {
 			}
 		}
 	} else {
-		redisConn := Redis.Pool.Get()
-		defer redisConn.Close()
-		//if result, e := redisConn.Do("ZRANGEBYSCORE", ls.key, 0, now, "WITHSCORES", "LIMIT", 0, 10); e == nil {
-		if result, e := redisConn.Do("ZRANGEBYSCORE", ls.key, 0, now, "LIMIT", 0, 10); e == nil {
-			if result == nil {
-				return nil, ErrNil
-			} else {
-				switch rt := result.(type) {
-				case []byte:
-					if len(rt) == 0 {
-						return nil, ErrNil
-					}
-					r = []string{string(rt)}
-				case []interface{}:
-					if len(rt) == 0 {
-						return nil, ErrNil
-					}
-					//zrem := make([]string, 0)
-					r = make([]string, 0)
-					for k, rtt := range rt {
-						v := string(rtt.([]byte))
-						r = append(r, v)
-						if k%2 == 0 { //偶数为member(0-based)
-							//fmt.Printf("k:%d,v:%s\n", k, v)
-							//zrem = append(zrem, v)
-							redisConn.Do("ZREM", ls.key, v)
-						}
-					}
-					//redisConn.Do("ZREM", ls.key, strings.Join(zrem, " "))
-					//redisConn.Do("ZREM", ls.key, zrem)
-				default:
-					err = fmt.Errorf("unknown type")
-				}
-			}
-		} else {
-			err = e
-		}
+		err = fmt.Errorf("not found localstorage")
 	}
 	return
 }
@@ -260,9 +205,7 @@ func (ls *LocalStorage) Del() (err error) {
 	if cc != nil { // use cluster
 		err = cc.Del(ls.key).Err()
 	} else {
-		redisConn := Redis.Pool.Get()
-		defer redisConn.Close()
-		_, err = redisConn.Do("DEL", ls.key)
+		err = fmt.Errorf("not found localstorage")
 	}
 	return err
 }
@@ -276,9 +219,7 @@ func (ls *LocalStorage) Schedule() (err error) {
 	if cc != nil { // use cluster
 		err = cc.ZAdd(ls.key, redis.Z{float64(ls.ts), ls.value}).Err()
 	} else {
-		redisConn := Redis.Pool.Get()
-		defer redisConn.Close()
-		_, err = redisConn.Do("ZADD", ls.key, ls.ts, ls.value)
+		err = fmt.Errorf("not found localstorage")
 	}
 	return
 }

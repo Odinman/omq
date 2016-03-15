@@ -65,13 +65,13 @@ func (o *OMQ) response(j Job) {
 			value = append([]string{taskId}, value...) //放前面
 			if err := mqpool.Push(key, value); err == nil {
 				o.Debug("push block task %s successful, task id: %s [%s]", key, taskId, time.Now())
-				blockTasks[taskId] = make(chan string, 1)
+				o.blockTasks[taskId] = make(chan string, 1)
 				bto := time.Tick(BTASK_TIMEOUT)
 				select {
 				case <-bto: //超时
 					o.Info("waiting time out")
 					conn.SendMessage(client, "", RESPONSE_ERROR)
-				case result := <-blockTasks[taskId]:
+				case result := <-o.blockTasks[taskId]:
 					o.Debug("block task result: %s [%s]", result, time.Now())
 					if result == "0" {
 						conn.SendMessage(client, "", RESPONSE_ERROR)
@@ -79,7 +79,7 @@ func (o *OMQ) response(j Job) {
 						conn.SendMessage(client, "", RESPONSE_OK, result)
 					}
 				}
-				delete(blockTasks, taskId)
+				delete(o.blockTasks, taskId)
 			} else {
 				o.Debug("push %s failed: %s", key, err)
 				conn.SendMessage(client, "", RESPONSE_ERROR, err.Error())
@@ -87,8 +87,8 @@ func (o *OMQ) response(j Job) {
 		case COMMAND_COMPLETE: // 完成阻塞任务
 			if len(cmd) > 3 {
 				if taskId := cmd[2]; taskId != "" {
-					if _, ok := blockTasks[taskId]; ok {
-						blockTasks[taskId] <- cmd[3]
+					if _, ok := o.blockTasks[taskId]; ok {
+						o.blockTasks[taskId] <- cmd[3]
 						conn.SendMessage(client, "", RESPONSE_OK)
 					} else {
 						conn.SendMessage(client, "", RESPONSE_ERROR)

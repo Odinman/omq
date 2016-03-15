@@ -3,7 +3,6 @@ package modules
 import (
 	"fmt"
 
-	"github.com/Odinman/goutils/zredis"
 	"github.com/Odinman/ogo"
 	"github.com/Odinman/omq/utils"
 	zmq "github.com/pebbe/zmq4"
@@ -11,15 +10,13 @@ import (
 )
 
 type OMQ struct {
-	Server       *ZSocket
-	ResponsePool *WorkerPool
+	blockTasks map[string](chan string)
 	ogo.Worker
 }
 
 var (
 	publisher *utils.Socket
 	mqpool    *utils.MQPool
-	Redis     *zredis.ZRedis
 	cc        *redis.ClusterClient
 )
 
@@ -30,9 +27,6 @@ func init() {
 func (o *OMQ) Main() error {
 	//read config
 	o.getConfig()
-
-	// block tasks
-	blockTasks = make(map[string](chan string))
 
 	// connect local storage
 	if cc = ogo.ClusterClient(); cc == nil {
