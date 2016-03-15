@@ -2,14 +2,22 @@ package modules
 
 import (
 	"fmt"
+
+	"github.com/Odinman/omq/utils"
 )
 
 /* {{{ func (o *OMQ) serve() error {
  *
  */
 func (o *OMQ) serve() error {
+	// publisher
+	o.pub, _ = NewZSocket("PUB", 50000, fmt.Sprint("tcp://*:", basePort+1), "")
+	defer o.pub.Close()
 	// block tasks
 	o.blockTasks = make(map[string](chan string))
+	// mq pool
+	o.mqPool = utils.NewMQPool()
+	defer o.mqPool.Destroy()
 	// create response pool
 	rp := NewWorkerPool(responseNodes, o.response)
 	rp.Run()

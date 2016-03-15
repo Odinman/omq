@@ -48,11 +48,11 @@ func (o *OMQ) response(j Job) {
 			}
 
 			// 发布(目标是跨IDC多点发布)
-			publisher.SendMessage(cmd)
+			o.pub.SendMessage(cmd)
 
 		case COMMAND_PUSH, COMMAND_TASK: //任务队列命令
 			value := cmd[2:]
-			if err := mqpool.Push(key, value); err == nil {
+			if err := o.mqPool.Push(key, value); err == nil {
 				o.Debug("push %s successful", key)
 				conn.SendMessage(client, "", RESPONSE_OK)
 			} else {
@@ -63,7 +63,7 @@ func (o *OMQ) response(j Job) {
 			value := cmd[2:]
 			taskId := ogoutils.NewShortUUID()
 			value = append([]string{taskId}, value...) //放前面
-			if err := mqpool.Push(key, value); err == nil {
+			if err := o.mqPool.Push(key, value); err == nil {
 				o.Debug("push block task %s successful, task id: %s [%s]", key, taskId, time.Now())
 				o.blockTasks[taskId] = make(chan string, 1)
 				bto := time.Tick(BTASK_TIMEOUT)
@@ -107,7 +107,7 @@ func (o *OMQ) response(j Job) {
 					o.Trace("pop block dura: %s", bt)
 				}
 			}
-			if value, err := mqpool.Pop(key, bt); err == nil {
+			if value, err := o.mqPool.Pop(key, bt); err == nil {
 				o.Debug("pop %s: %s [%s]", key, value, time.Now())
 				conn.SendMessage(client, "", RESPONSE_OK, value) //回复REQ,因此要加上一个空帧
 			} else if err.Error() == RESPONSE_NIL {

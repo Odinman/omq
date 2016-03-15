@@ -39,15 +39,10 @@ const (
 
 //config var
 var (
-	basePort      int
-	remotePort    int
-	redisAddr     string
-	redisSentinel string
-	redisPwd      string
-	redisDB       string
-	redisMTag     string
-	pubAddr       string
-	mqBuffer      int
+	basePort   int
+	remotePort int
+	pubAddr    string
+	mqBuffer   int
 
 	responseNodes int // 回复节点的个数
 
@@ -62,26 +57,6 @@ func (o *OMQ) getConfig() {
 		basePort = port
 	} else {
 		basePort = 7000 //default is 7000
-	}
-	// local redis addr
-	if raddr := workerConfig.String("redis_addr"); raddr != "" {
-		redisAddr = raddr
-	}
-	// local redis sentinels
-	if saddr := workerConfig.String("redis_sentinel"); saddr != "" {
-		redisSentinel = saddr
-	}
-	// local redis passwd
-	if rpwd := workerConfig.String("redis_pwd"); rpwd != "" {
-		redisPwd = rpwd
-	}
-	// local redis db
-	if rdb := workerConfig.String("redis_db"); rdb != "" {
-		redisDB = rdb
-	}
-	// sentinel master tag
-	if mtag := workerConfig.String("redis_mtag"); mtag != "" {
-		redisMTag = mtag
 	}
 
 	// remote publisher

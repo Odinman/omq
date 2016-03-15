@@ -1,23 +1,20 @@
 package modules
 
 import (
-	"fmt"
-
 	"github.com/Odinman/ogo"
 	"github.com/Odinman/omq/utils"
-	zmq "github.com/pebbe/zmq4"
 	"gopkg.in/redis.v3"
 )
 
 type OMQ struct {
+	pub        *ZSocket
+	mqPool     *utils.MQPool
 	blockTasks map[string](chan string)
 	ogo.Worker
 }
 
 var (
-	publisher *utils.Socket
-	mqpool    *utils.MQPool
-	cc        *redis.ClusterClient
+	cc *redis.ClusterClient
 )
 
 func init() {
@@ -35,18 +32,9 @@ func (o *OMQ) Main() error {
 		o.Info("found cluster, gooood!")
 	}
 
-	// Socket to pub
-	publisher = utils.NewSocket(zmq.PUB, 50000)
-	defer publisher.Close()
-	publisher.Bind(fmt.Sprint("tcp://*:", basePort+1))
-	o.Debug("publisher bind port: %v", basePort+1)
-
-	mqpool = utils.NewMQPool()
-	defer mqpool.Destroy()
-
 	// 订阅其他server发布的内容
 	if pubAddr != "" {
-		go o.newSubscriber()
+		o.newSubscriber()
 	}
 
 	return o.serve()
