@@ -1,5 +1,6 @@
 conf/*.conf
 omq
+odinmq
 logs
 cert.pem
 key.pem
