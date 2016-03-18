@@ -35,10 +35,11 @@ func (o *OMQ) newSubscriber() {
 					//subscriber收到的信息应该是不包含信封的
 					o.Trace("recv msg: %q", msg)
 
-					// 存到本地存储(同步)
-					if err := o.localStorage(msg); err != nil {
-						o.Debug("error: %s", err)
-					}
+					o.execCommand(msg)
+					//// 存到本地存储(同步)
+					//if err := o.localStorage(msg); err != nil {
+					//	o.Debug("error: %s", err)
+					//}
 
 					liveness = HEARTBEAT_LIVENESS
 				} else if len(msg) == 1 {
