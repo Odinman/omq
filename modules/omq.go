@@ -14,7 +14,8 @@ type OMQ struct {
 }
 
 type Request struct {
-	Client  string   `json:"client,omitempty"`
+	Client  string `json:"client,omitempty"`
+	act     string
 	Command []string `json:"command,omitempty"`
 }
 
@@ -26,6 +27,7 @@ func NewRequest(msg []string) *Request {
 	client, cmd := utils.Unwrap(msg)
 	r.Client = client
 	if len(cmd) > 1 {
+		r.act = cmd[0]
 		r.Command = cmd
 	}
 	return r

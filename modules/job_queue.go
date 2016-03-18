@@ -26,6 +26,20 @@ func NewJob(r []string, c *ZSocket) *Job {
 
 /* }}} */
 
+/* {{{ func (j *Job) SaveAccess(payload interface{})
+ *
+ */
+func (j *Job) SaveAccess() {
+	if r, ok := j.Result.([]string); ok && r[0] == RESPONSE_NIL && (j.Payload.(*Request).act == COMMAND_POP || j.Payload.(*Request).act == COMMAND_BPOP) {
+		// BPOP&POP操作没有返回时, 不记录
+	} else {
+		j.access.App = j
+		j.access.Save()
+	}
+}
+
+/* }}} */
+
 type JobFunc func(j *Job)
 
 type JobWorker struct {

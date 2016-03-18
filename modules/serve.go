@@ -60,8 +60,7 @@ func (o *OMQ) response(j *Job) {
 	}
 
 	// access log
-	j.access.App = j
-	j.access.Save()
+	j.SaveAccess()
 }
 
 /* }}} */
