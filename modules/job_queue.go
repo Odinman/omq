@@ -2,18 +2,35 @@
 // reference: http://marcio.io/2015/07/handling-1-million-requests-per-minute-with-golang/
 package modules
 
-import ()
+import (
+	"github.com/Odinman/ogo"
+)
 
 type Job struct {
-	Request []string
-	Conn    *ZSocket
+	Payload interface{} `json:"payload,omitempty"`
+	Result  interface{} `json:"result,omitempty"`
+	conn    *ZSocket
+	access  *ogo.Access
 }
 
-type JobFunc func(j Job)
+/* {{{ func NewJob(r []string, c *ZSocket) *Job
+ *
+ */
+func NewJob(r []string, c *ZSocket) *Job {
+	return &Job{
+		Payload: NewRequest(r),
+		conn:    c,
+		access:  ogo.NewAccess(),
+	}
+}
+
+/* }}} */
+
+type JobFunc func(j *Job)
 
 type JobWorker struct {
-	pool       chan chan Job
-	jobChannel chan Job
+	pool       chan chan *Job
+	jobChannel chan *Job
 	quit       chan bool
 	Handler    JobFunc
 }
@@ -21,10 +38,10 @@ type JobWorker struct {
 /* {{{ func newJobWorker(wp chan chan Job, jf JobFunc) *JobWorker
  *
  */
-func newJobWorker(wp chan chan Job, jf JobFunc) *JobWorker {
+func newJobWorker(wp chan chan *Job, jf JobFunc) *JobWorker {
 	return &JobWorker{
 		pool:       wp,
-		jobChannel: make(chan Job),
+		jobChannel: make(chan *Job),
 		quit:       make(chan bool),
 		Handler:    jf,
 	}
@@ -46,7 +63,7 @@ func (jw *JobWorker) Start(sn int) {
 				// we have received a work request.
 				//client, cmd := utils.Unwrap(job.Request)
 				////ogo.Debug("[worker %d] [client: %q] [cmd: %s]", sn, client, cmd)
-				//if c, e := job.Conn.SendMessage(client, "", RESPONSE_OK); e != nil {
+				//if c, e := job.conn.SendMessage(client, "", RESPONSE_OK); e != nil {
 				//	ogo.Debug("send failed: %s", e)
 				//} else {
 				//	ogo.Debug("send success: %d", c)
@@ -76,8 +93,8 @@ func (jw *JobWorker) Stop() {
 
 type WorkerPool struct {
 	// A pool of workers channels that are registered with the dispatcher
-	queue   chan Job
-	pool    chan chan Job
+	queue   chan *Job
+	pool    chan chan *Job
 	max     int
 	handler JobFunc
 }
@@ -86,8 +103,8 @@ type WorkerPool struct {
  *
  */
 func NewWorkerPool(maxWorkers int, jf JobFunc) *WorkerPool {
-	pool := make(chan chan Job, maxWorkers)
-	queue := make(chan Job)
+	pool := make(chan chan *Job, maxWorkers)
+	queue := make(chan *Job)
 	return &WorkerPool{
 		queue:   queue,
 		pool:    pool,
@@ -122,7 +139,7 @@ func (wp *WorkerPool) dispatch() {
 		case job := <-wp.queue:
 			//ogo.Debug("[dispatch] recv job: %s", job)
 			// a job request has been received
-			go func(job Job) {
+			go func(job *Job) {
 				// try to obtain a worker job channel that is available.
 				// this will block until a worker is idle
 				jobChannel := <-wp.pool

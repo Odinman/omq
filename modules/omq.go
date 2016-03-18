@@ -13,6 +13,26 @@ type OMQ struct {
 	ogo.Worker
 }
 
+type Request struct {
+	Client  string   `json:"client,omitempty"`
+	Command []string `json:"command,omitempty"`
+}
+
+/* {{{ func NewRequest(msg []string) *Request
+ *
+ */
+func NewRequest(msg []string) *Request {
+	r := new(Request)
+	client, cmd := utils.Unwrap(msg)
+	r.Client = client
+	if len(cmd) > 1 {
+		r.Command = cmd
+	}
+	return r
+}
+
+/* }}} */
+
 var (
 	cc *redis.ClusterClient
 )

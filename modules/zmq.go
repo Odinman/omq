@@ -169,8 +169,8 @@ func (zs *ZSocket) Accept() (msg []string, err error) {
 	zs.mu.RLock()
 	defer zs.mu.RUnlock()
 	poller, _ := zs.GetPoller("POLLIN")
-	//if sockets, e := zs.poller.Poll(2500 * time.Millisecond); e != nil {
 	if sockets, e := poller.Poll(1 * time.Millisecond); e != nil {
+		//if sockets, e := poller.Poll(0 * time.Millisecond); e != nil {
 		err = e
 	} else if len(sockets) > 0 {
 		return zs.socket.RecvMessage(0)
