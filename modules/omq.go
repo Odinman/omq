@@ -1,12 +1,16 @@
 package modules
 
 import (
+	"fmt"
+
 	"github.com/Odinman/ogo"
 	"github.com/Odinman/omq/utils"
 	"gopkg.in/redis.v3"
 )
 
 type OMQ struct {
+	server     *ZServer
+	wp         *WorkerPool
 	pub        *ZSocket
 	mqPool     *utils.MQPool
 	blockTasks map[string](chan string)
@@ -18,6 +22,15 @@ type Request struct {
 	act     string
 	Command []string `json:"command,omitempty"`
 }
+
+/* {{{ func (o *OMQ) serveHandler(msg []string, writer *ZSocket) error
+ *
+ */
+func (o *OMQ) serveHandler(msg []string, writer *ZSocket) {
+	o.wp.queue <- NewJob(msg, writer)
+}
+
+/* }}} */
 
 /* {{{ func NewRequest(msg []string) *Request
  *
@@ -59,5 +72,22 @@ func (o *OMQ) Main() error {
 		o.newSubscriber()
 	}
 
-	return o.serve()
+	// publisher
+	o.pub, _ = NewZSocket("PUB", 50000, fmt.Sprint("tcp://*:", basePort+1))
+	defer o.pub.Close()
+
+	// block tasks
+	o.blockTasks = make(map[string](chan string))
+	// mq pool
+	o.mqPool = utils.NewMQPool()
+	defer o.mqPool.Destroy()
+
+	// create response pool, and regist job function
+	o.wp = NewWorkerPool(responseNodes, o.response)
+	o.wp.Run()
+
+	o.server, _ = NewZServer(o.serveHandler, fmt.Sprint("tcp://*:", basePort))
+	defer o.server.Close()
+
+	return o.server.Serve()
 }

@@ -10,6 +10,38 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
+var (
+	counter = 0
+	lock    sync.Mutex
+
+	ztMapping = map[string]zmq.Type{
+		"REQ":    zmq.REQ,
+		"REP":    zmq.REP,
+		"DEALER": zmq.DEALER,
+		"ROUTER": zmq.ROUTER,
+		"PUB":    zmq.PUB,
+		"SUB":    zmq.SUB,
+		"XPUB":   zmq.XPUB,
+		"XSUB":   zmq.XSUB,
+		"PUSH":   zmq.PUSH,
+		"PULL":   zmq.PULL,
+		"PAIR":   zmq.PAIR,
+		"STREAM": zmq.STREAM,
+	}
+)
+
+/* {{{ func nextId() int
+ *
+ */
+func nextId() int {
+	lock.Lock()
+	defer lock.Unlock()
+	counter++
+	return counter
+}
+
+/* }}} */
+
 type ZSocket struct {
 	mu        sync.RWMutex
 	typ       zmq.Type
@@ -22,20 +54,81 @@ type ZSocket struct {
 	subFilter string // subscribe 过滤
 }
 
-var ztMapping = map[string]zmq.Type{
-	"REQ":    zmq.REQ,
-	"REP":    zmq.REP,
-	"DEALER": zmq.DEALER,
-	"ROUTER": zmq.ROUTER,
-	"PUB":    zmq.PUB,
-	"SUB":    zmq.SUB,
-	"XPUB":   zmq.XPUB,
-	"XSUB":   zmq.XSUB,
-	"PUSH":   zmq.PUSH,
-	"PULL":   zmq.PULL,
-	"PAIR":   zmq.PAIR,
-	"STREAM": zmq.STREAM,
+type ServeFunc func(msg []string, queue *ZSocket)
+
+type ZPair struct {
+	addr string
+	push *ZSocket
+	pop  *ZSocket
 }
+
+type ZServer struct {
+	In      *ZSocket
+	Out     *ZPair
+	handler ServeFunc
+}
+
+/* {{{ func NewZServer(handler ServeFunc, addr string) (*ZServer, error)
+ *
+ */
+func NewZServer(handler ServeFunc, addr string) (os *ZServer, err error) {
+	os = new(ZServer)
+	if os.In, err = NewZSocket("ROUTER", 65536, addr); err != nil {
+		return
+	}
+	os.Out = NewZPair()
+	os.handler = handler
+	return
+}
+
+/* }}} */
+
+/* {{{ func (s *ZServer) Serve() (err error)
+ *
+ */
+func (s *ZServer) Serve() (err error) {
+	in := s.In
+	outPop := s.Out.pop   // output read queue
+	outPush := s.Out.push // output write queue
+	poller := zmq.NewPoller()
+	poller.Add(in.socket, zmq.POLLIN)
+	poller.Add(outPop.socket, zmq.POLLIN)
+
+	for {
+		if sockets, e := poller.Poll(100 * time.Millisecond); e == nil {
+			if len(sockets) > 0 {
+				for _, socket := range sockets {
+					switch socket.Socket {
+					case in.socket: // request
+						msg, _ := in.RecvMessage(0)
+						s.handler(msg, outPush)
+					case outPop.socket: // response
+						msg, _ := outPop.RecvMessage(0)
+						in.SendMessage(msg)
+					}
+				}
+			}
+		} else {
+			err = fmt.Errorf("poll error: %s", e)
+		}
+	}
+
+	return
+}
+
+/* }}} */
+
+/* {{{ func (os *ZServer) Close() (err error)
+ *
+ */
+func (os *ZServer) Close() (err error) {
+	if err = os.In.Close(); err != nil {
+		return
+	}
+	return os.Out.Close()
+}
+
+/* }}} */
 
 /* {{{ func NewZSocket(t string, hwm int, opts ...string) (*ZSocket, error)
  *
@@ -199,6 +292,31 @@ func (zs *ZSocket) SendMessage(parts ...interface{}) (total int, err error) {
 	zs.mu.Lock()
 	defer zs.mu.Unlock()
 	return zs.socket.SendMessage(parts...)
+}
+
+/* }}} */
+
+/* {{{ func NewZPair() *ZPair
+ * 建立一个连接的PAIR对
+ */
+func NewZPair() *ZPair {
+	zp := new(ZPair)
+	zp.addr = fmt.Sprintf("inproc://socket-pair-%d", nextId())
+	zp.pop, _ = NewZSocket("PAIR", 65536, zp.addr)
+	zp.push, _ = NewZSocket("PAIR", 65536, "", zp.addr)
+	return zp
+}
+
+/* }}} */
+
+/* {{{ func (zp *ZPair) Close() (err error)
+ *
+ */
+func (zp *ZPair) Close() (err error) {
+	if err = zp.push.Close(); err != nil {
+		return
+	}
+	return zp.pop.Close()
 }
 
 /* }}} */
