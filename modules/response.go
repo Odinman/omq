@@ -16,7 +16,7 @@ func (o *OMQ) response(j *utils.Job) {
 
 		o.Trace("recv cmd: %s, from client: %q", cmd, r.Client)
 
-		rt = o.execCommand(cmd)
+		rt = o.execCommand(cmd, r.session)
 		j.Result = rt
 	} else { //命令错误
 		o.Info("invalid command: %q", r.Command)
