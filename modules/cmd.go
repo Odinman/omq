@@ -4,17 +4,26 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	ogoutils "github.com/Odinman/ogo/utils"
 )
 
-/* {{{ func (o *OMQ) execCommand(cmd []string) (result []string)
+/* {{{ func (o *OMQ) execCommand(cmd []string, opts ...string) (result []string)
  *
  */
-func (o *OMQ) execCommand(cmd []string) (result []string) {
+func (o *OMQ) execCommand(cmd []string, opts ...string) (result []string) {
 	result = make([]string, 0)
 	act := strings.ToUpper(cmd[0])
 	key := cmd[1]
+	var session string
+	if len(opts) > 0 {
+		for i, opt := range opts {
+			switch i {
+			case 0:
+				session = opt
+			default:
+				break
+			}
+		}
+	}
 	switch act {
 	case COMMAND_GET, COMMAND_TIMING: //获取key内容
 		if r, err := o.localGet(cmd); err != nil {
@@ -53,7 +62,8 @@ func (o *OMQ) execCommand(cmd []string) (result []string) {
 		}
 	case COMMAND_BTASK: //阻塞任务队列命令
 		value := cmd[2:]
-		taskId := ogoutils.NewShortUUID()
+		//taskId := ogoutils.NewShortUUID()
+		taskId := session
 		value = append([]string{taskId}, value...) //放前面
 		if err := o.mqPool.Push(key, value); err == nil {
 			o.Debug("push block task %s successful, task id: %s [%s]", key, taskId, time.Now())

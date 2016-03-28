@@ -39,6 +39,7 @@ const (
 
 //config var
 var (
+	service    string
 	basePort   int
 	remotePort int
 	pubAddr    string
@@ -52,6 +53,12 @@ var (
 //get worker config from ogo
 func (o *OMQ) getConfig() {
 	workerConfig := ogo.Config()
+	// service name
+	if sn := workerConfig.String("service_name"); sn != "" {
+		service = sn
+	} else {
+		service = "omqd"
+	}
 	//base port
 	if port, err := workerConfig.Int("base_port"); err == nil {
 		basePort = port

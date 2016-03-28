@@ -6,6 +6,7 @@ import (
 
 	"github.com/Odinman/ogo"
 	"github.com/Odinman/omq/utils"
+	"github.com/dustin/randbo"
 	"gopkg.in/redis.v3"
 )
 
@@ -23,6 +24,7 @@ type Request struct {
 	act     string
 	Command []string `json:"command,omitempty"`
 	conn    *utils.ZSocket
+	session string
 	access  *ogo.Access
 }
 
@@ -68,7 +70,10 @@ func (o *OMQ) outHandler(msg []string, writer *utils.ZSocket) {
  */
 func NewRequest(client string, cmd []string, writer *utils.ZSocket) *Request {
 	r := new(Request)
-	//client, cmd := utils.Unwrap(msg)
+	// session
+	buf := make([]byte, 16)
+	randbo.New().Read(buf)
+	r.session = fmt.Sprintf("%x", buf)
 	r.Client = client
 	if len(cmd) > 1 {
 		r.act = cmd[0]
@@ -77,7 +82,7 @@ func NewRequest(client string, cmd []string, writer *utils.ZSocket) *Request {
 	if writer != nil {
 		r.conn = writer
 	}
-	r.access = ogo.NewAccess()
+	r.access = ogo.NewAccess(service, r.session)
 	return r
 }
 

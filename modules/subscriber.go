@@ -53,8 +53,6 @@ func (o *OMQ) newSubscriber() {
 					} else {
 						o.Debug("E: invalid message, %q", msg)
 					}
-				} else {
-					o.Debug("E: invalid message: %q", msg)
 				}
 				interval = INTERVAL_INIT
 			} else {
