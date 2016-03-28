@@ -22,8 +22,10 @@ func (o *OMQ) response(j *utils.Job) {
 		o.Info("invalid command: %q", r.Command)
 		j.Result = rt
 	}
-	// 最后一帧加上开始时间, 以统计最终耗时
-	r.conn.SendMessage(r.Client, "", rt, r.access.Time.Format(time.RFC3339Nano))
+	if r.Client != "" && r.conn != nil { //有客户端并且有连接, 则返回
+		// 最后一帧加上开始时间, 以统计最终耗时
+		r.conn.SendMessage(r.Client, "", rt, r.access.Time.Format(time.RFC3339Nano))
+	}
 
 	// save access
 	if rt[0] == RESPONSE_NIL && (r.act == COMMAND_POP || r.act == COMMAND_BPOP) {

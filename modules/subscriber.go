@@ -35,7 +35,13 @@ func (o *OMQ) newSubscriber() {
 					//subscriber收到的信息应该是不包含信封的
 					o.Trace("recv msg: %q", msg)
 
-					o.execCommand(msg)
+					r := NewRequest("", msg, nil)
+					// create a job
+					job := utils.NewJob(r)
+					// save job in access
+					r.access.App = job
+					// push job to worker pool
+					o.wp.Push(job)
 
 					liveness = HEARTBEAT_LIVENESS
 				} else if len(msg) == 1 {

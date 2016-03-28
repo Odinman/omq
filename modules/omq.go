@@ -39,7 +39,8 @@ func init() {
  */
 func (o *OMQ) inHandler(msg []string, writer *utils.ZSocket) {
 	// build payload
-	request := NewRequest(msg, writer)
+	client, cmd := utils.Unwrap(msg)
+	request := NewRequest(client, cmd, writer)
 	// create a job
 	job := utils.NewJob(request)
 	// save job in access
@@ -62,18 +63,20 @@ func (o *OMQ) outHandler(msg []string, writer *utils.ZSocket) {
 
 /* }}} */
 
-/* {{{ func NewRequest(msg []string, writer *utils.ZSocket) *Request
+/* {{{ func NewRequest(client string,cmd []string, writer *utils.ZSocket) *Request
  *
  */
-func NewRequest(msg []string, writer *utils.ZSocket) *Request {
+func NewRequest(client string, cmd []string, writer *utils.ZSocket) *Request {
 	r := new(Request)
-	client, cmd := utils.Unwrap(msg)
+	//client, cmd := utils.Unwrap(msg)
 	r.Client = client
 	if len(cmd) > 1 {
 		r.act = cmd[0]
 		r.Command = cmd
 	}
-	r.conn = writer
+	if writer != nil {
+		r.conn = writer
+	}
 	r.access = ogo.NewAccess()
 	return r
 }
@@ -107,6 +110,10 @@ func (o *OMQ) Main() error {
 		o.Info("found cluster, gooood!")
 	}
 
+	// create worker pool, and regist job function
+	o.wp = utils.NewWorkerPool(responseNodes, o.response)
+	o.wp.Run()
+
 	// 订阅其他server发布的内容
 	if pubAddr != "" {
 		o.newSubscriber()
@@ -121,10 +128,6 @@ func (o *OMQ) Main() error {
 	// mq pool
 	o.mqPool = utils.NewMQPool()
 	defer o.mqPool.Destroy()
-
-	// create responser pool, and regist job function
-	o.wp = utils.NewWorkerPool(responseNodes, o.response)
-	o.wp.Run()
 
 	o.server, _ = utils.NewZServer(o.inHandler, o.outHandler, fmt.Sprint("tcp://*:", basePort))
 	defer o.server.Close()
