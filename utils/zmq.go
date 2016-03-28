@@ -1,5 +1,5 @@
-// Package modules provides ...
-package modules
+// Package utils provides ...
+package utils
 
 import (
 	"fmt"
@@ -63,8 +63,8 @@ type ZPair struct {
 }
 
 type ZServer struct {
-	In       *ZSocket
-	Out      *ZPair
+	in       *ZSocket
+	out      *ZPair
 	incoming ServeFunc
 	outgoing ServeFunc
 }
@@ -72,17 +72,17 @@ type ZServer struct {
 /* {{{ func NewZServer(in ServeFunc, out ServeFunc, addr string) (*ZServer, error)
  *
  */
-func NewZServer(in ServeFunc, out ServeFunc, addr string) (os *ZServer, err error) {
-	os = new(ZServer)
+func NewZServer(in ServeFunc, out ServeFunc, addr string) (zs *ZServer, err error) {
+	zs = new(ZServer)
 	// 对外是一个ROUTER
-	if os.In, err = NewZSocket("ROUTER", 65536, addr); err != nil {
+	if zs.in, err = NewZSocket("ROUTER", 65536, addr); err != nil {
 		return
 	}
 	// 建立一个内置的pair通道, 作为response专用通道
-	os.Out = NewZPair()
+	zs.out = NewZPair()
 	// 自定义handler
-	os.incoming = in
-	os.outgoing = out
+	zs.incoming = in
+	zs.outgoing = out
 	return
 }
 
@@ -92,9 +92,9 @@ func NewZServer(in ServeFunc, out ServeFunc, addr string) (os *ZServer, err erro
  *
  */
 func (s *ZServer) Serve() (err error) {
-	in := s.In
-	outPop := s.Out.pop   // output read queue
-	outPush := s.Out.push // output write queue
+	in := s.in
+	outPop := s.out.pop   // output read queue
+	outPush := s.out.push // output write queue
 	poller := zmq.NewPoller()
 	poller.Add(in.socket, zmq.POLLIN)
 	poller.Add(outPop.socket, zmq.POLLIN)
@@ -123,14 +123,14 @@ func (s *ZServer) Serve() (err error) {
 
 /* }}} */
 
-/* {{{ func (os *ZServer) Close() (err error)
+/* {{{ func (zs *ZServer) Close() (err error)
  *
  */
-func (os *ZServer) Close() (err error) {
-	if err = os.In.Close(); err != nil {
+func (zs *ZServer) Close() (err error) {
+	if err = zs.in.Close(); err != nil {
 		return
 	}
-	return os.Out.Close()
+	return zs.out.Close()
 }
 
 /* }}} */

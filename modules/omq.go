@@ -10,9 +10,9 @@ import (
 )
 
 type OMQ struct {
-	server     *ZServer
+	server     *utils.ZServer
 	wp         *utils.WorkerPool
-	pub        *ZSocket
+	pub        *utils.ZSocket
 	mqPool     *utils.MQPool
 	blockTasks map[string](chan string)
 	ogo.Worker
@@ -22,7 +22,7 @@ type Request struct {
 	Client  string `json:"client,omitempty"`
 	act     string
 	Command []string `json:"command,omitempty"`
-	conn    *ZSocket
+	conn    *utils.ZSocket
 	access  *ogo.Access
 }
 
@@ -34,10 +34,10 @@ func init() {
 	ogo.AddWorker(&OMQ{})
 }
 
-/* {{{ func (o *OMQ) inHandler(msg []string, writer *ZSocket) error
+/* {{{ func (o *OMQ) inHandler(msg []string, writer *utils.ZSocket) error
  *
  */
-func (o *OMQ) inHandler(msg []string, writer *ZSocket) {
+func (o *OMQ) inHandler(msg []string, writer *utils.ZSocket) {
 	// build payload
 	request := NewRequest(msg, writer)
 	// create a job
@@ -50,10 +50,10 @@ func (o *OMQ) inHandler(msg []string, writer *ZSocket) {
 
 /* }}} */
 
-/* {{{ func (o *OMQ) outHandler(msg []stroutg, writer *ZSocket) error
+/* {{{ func (o *OMQ) outHandler(msg []stroutg, writer *utils.ZSocket) error
  *
  */
-func (o *OMQ) outHandler(msg []string, writer *ZSocket) {
+func (o *OMQ) outHandler(msg []string, writer *utils.ZSocket) {
 	l := len(msg)
 	start, _ := time.Parse(time.RFC3339Nano, msg[l-1])
 	writer.SendMessage(msg[0 : l-1])
@@ -62,10 +62,10 @@ func (o *OMQ) outHandler(msg []string, writer *ZSocket) {
 
 /* }}} */
 
-/* {{{ func NewRequest(msg []string, writer *ZSocket) *Request
+/* {{{ func NewRequest(msg []string, writer *utils.ZSocket) *Request
  *
  */
-func NewRequest(msg []string, writer *ZSocket) *Request {
+func NewRequest(msg []string, writer *utils.ZSocket) *Request {
 	r := new(Request)
 	client, cmd := utils.Unwrap(msg)
 	r.Client = client
@@ -113,7 +113,7 @@ func (o *OMQ) Main() error {
 	}
 
 	// publisher, port = baseport + 1
-	o.pub, _ = NewZSocket("PUB", 65536, fmt.Sprint("tcp://*:", basePort+1))
+	o.pub, _ = utils.NewZSocket("PUB", 65536, fmt.Sprint("tcp://*:", basePort+1))
 	defer o.pub.Close()
 
 	// block tasks
@@ -126,7 +126,7 @@ func (o *OMQ) Main() error {
 	o.wp = utils.NewWorkerPool(responseNodes, o.response)
 	o.wp.Run()
 
-	o.server, _ = NewZServer(o.inHandler, o.outHandler, fmt.Sprint("tcp://*:", basePort))
+	o.server, _ = utils.NewZServer(o.inHandler, o.outHandler, fmt.Sprint("tcp://*:", basePort))
 	defer o.server.Close()
 
 	return o.server.Serve()

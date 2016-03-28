@@ -14,7 +14,7 @@ func (o *OMQ) newSubscriber() {
 
 	go func() {
 		identity, _ := utils.GetLocalIdentity(fmt.Sprint(basePort)) //防止同一台机器得到相同的identity
-		subscriber, _ := NewZSocket("SUB", 50000, "", fmt.Sprint("tcp://", pubAddr, ":", remotePort+1), identity)
+		subscriber, _ := utils.NewZSocket("SUB", 50000, "", fmt.Sprint("tcp://", pubAddr, ":", remotePort+1), identity)
 
 		//  If liveness hits zero, queue is considered disconnected
 		liveness := HEARTBEAT_LIVENESS
@@ -64,7 +64,7 @@ func (o *OMQ) newSubscriber() {
 						interval = 2 * interval
 					}
 					// reconnect
-					subscriber, _ = NewZSocket("SUB", 50000, "", fmt.Sprint("tcp://", pubAddr, ":", remotePort+1), identity)
+					subscriber, _ = utils.NewZSocket("SUB", 50000, "", fmt.Sprint("tcp://", pubAddr, ":", remotePort+1), identity)
 					liveness = HEARTBEAT_LIVENESS
 				}
 			}
