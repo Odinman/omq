@@ -11,7 +11,7 @@ import (
 
 type OMQ struct {
 	server     *ZServer
-	wp         *WorkerPool
+	wp         *utils.WorkerPool
 	pub        *ZSocket
 	mqPool     *utils.MQPool
 	blockTasks map[string](chan string)
@@ -41,11 +41,11 @@ func (o *OMQ) inHandler(msg []string, writer *ZSocket) {
 	// build payload
 	request := NewRequest(msg, writer)
 	// create a job
-	job := NewJob(request)
+	job := utils.NewJob(request)
 	// save job in access
 	request.access.App = job
 	// push job to worker pool
-	o.wp.queue <- job
+	o.wp.Push(job)
 }
 
 /* }}} */
@@ -123,7 +123,7 @@ func (o *OMQ) Main() error {
 	defer o.mqPool.Destroy()
 
 	// create responser pool, and regist job function
-	o.wp = NewWorkerPool(responseNodes, o.response)
+	o.wp = utils.NewWorkerPool(responseNodes, o.response)
 	o.wp.Run()
 
 	o.server, _ = NewZServer(o.inHandler, o.outHandler, fmt.Sprint("tcp://*:", basePort))

@@ -1,12 +1,28 @@
-// Package modules provides ...
+// Package utils provides ...
+// job queue
 // reference: http://marcio.io/2015/07/handling-1-million-requests-per-minute-with-golang/
-package modules
-
-import ()
+package utils
 
 type Job struct {
 	Payload interface{} `json:"payload,omitempty"`
 	Result  interface{} `json:"result,omitempty"`
+}
+
+type JobFunc func(j *Job)
+
+type JobWorker struct {
+	pool       chan chan *Job
+	jobChannel chan *Job
+	quit       chan bool
+	handler    JobFunc
+}
+
+type WorkerPool struct {
+	// A pool of workers channels that are registered with the dispatcher
+	queue   chan *Job
+	pool    chan chan *Job
+	max     int
+	handler JobFunc
 }
 
 /* {{{ func NewJob(pl interface{}) *Job
@@ -20,29 +36,6 @@ func NewJob(pl interface{}) *Job {
 
 /* }}} */
 
-/* {{{ func (j *Job) SaveAccess(payload interface{})
- *
- */
-//func (j *Job) SaveAccess() {
-//	if r, ok := j.Result.([]string); ok && r[0] == RESPONSE_NIL && (j.Payload.(*Request).act == COMMAND_POP || j.Payload.(*Request).act == COMMAND_BPOP) {
-//		// BPOP&POP操作没有返回时, 不记录
-//	} else {
-//		j.access.App = j
-//		j.access.Save()
-//	}
-//}
-
-/* }}} */
-
-type JobFunc func(j *Job)
-
-type JobWorker struct {
-	pool       chan chan *Job
-	jobChannel chan *Job
-	quit       chan bool
-	Handler    JobFunc
-}
-
 /* {{{ func (jw *JobWorker) Start(sn int)
  *
  */
@@ -55,7 +48,7 @@ func (jw *JobWorker) Start(sn int) {
 			select {
 			case job := <-jw.jobChannel:
 				// we have received a job
-				jw.Handler(job)
+				jw.handler(job)
 			case <-jw.quit:
 				// we have received a signal to stop
 				return
@@ -76,14 +69,6 @@ func (jw *JobWorker) Stop() {
 }
 
 /* }}} */
-
-type WorkerPool struct {
-	// A pool of workers channels that are registered with the dispatcher
-	queue   chan *Job
-	pool    chan chan *Job
-	max     int
-	handler JobFunc
-}
 
 /* {{{ func NewWorkerPool(maxWorkers int, jf JobFunc) *WorkerPool
  *
@@ -111,7 +96,7 @@ func (wp *WorkerPool) Run() {
 			pool:       wp.pool,
 			jobChannel: make(chan *Job),
 			quit:       make(chan bool),
-			Handler:    wp.handler,
+			handler:    wp.handler,
 		}
 		worker.Start(i)
 	}
@@ -128,7 +113,6 @@ func (wp *WorkerPool) dispatch() {
 	for {
 		select {
 		case job := <-wp.queue:
-			//ogo.Debug("[dispatch] recv job: %s", job)
 			// a job request has been received
 			go func(job *Job) {
 				// try to obtain a worker job channel that is available.
@@ -140,6 +124,15 @@ func (wp *WorkerPool) dispatch() {
 			}(job)
 		}
 	}
+}
+
+/* }}} */
+
+/* {{{ func (wp *WorkerPool) Push(j *Job)
+ *
+ */
+func (wp *WorkerPool) Push(j *Job) {
+	wp.queue <- j
 }
 
 /* }}} */

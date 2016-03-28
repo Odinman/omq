@@ -2,12 +2,14 @@ package modules
 
 import (
 	"time"
+
+	"github.com/Odinman/omq/utils"
 )
 
-/* {{{ func (o *OMQ) response(j *Job)
+/* {{{ func (o *OMQ) response(j *utils.Job)
  * 回复
  */
-func (o *OMQ) response(j *Job) {
+func (o *OMQ) response(j *utils.Job) {
 	r := j.Payload.(*Request)
 	rt := []string{RESPONSE_UNKNOWN}
 	if cmd := r.Command; len(cmd) >= 2 { //命令应该大于1帧(包含信封以及空帧)
