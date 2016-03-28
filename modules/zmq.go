@@ -54,7 +54,7 @@ type ZSocket struct {
 	subFilter string // subscribe 过滤
 }
 
-type ServeFunc func(msg []string, queue *ZSocket)
+type ServeFunc func([]string, *ZSocket)
 
 type ZPair struct {
 	addr string
@@ -63,21 +63,26 @@ type ZPair struct {
 }
 
 type ZServer struct {
-	In      *ZSocket
-	Out     *ZPair
-	handler ServeFunc
+	In       *ZSocket
+	Out      *ZPair
+	incoming ServeFunc
+	outgoing ServeFunc
 }
 
-/* {{{ func NewZServer(handler ServeFunc, addr string) (*ZServer, error)
+/* {{{ func NewZServer(in ServeFunc, out ServeFunc, addr string) (*ZServer, error)
  *
  */
-func NewZServer(handler ServeFunc, addr string) (os *ZServer, err error) {
+func NewZServer(in ServeFunc, out ServeFunc, addr string) (os *ZServer, err error) {
 	os = new(ZServer)
+	// 对外是一个ROUTER
 	if os.In, err = NewZSocket("ROUTER", 65536, addr); err != nil {
 		return
 	}
+	// 建立一个内置的pair通道, 作为response专用通道
 	os.Out = NewZPair()
-	os.handler = handler
+	// 自定义handler
+	os.incoming = in
+	os.outgoing = out
 	return
 }
 
@@ -101,10 +106,10 @@ func (s *ZServer) Serve() (err error) {
 					switch socket.Socket {
 					case in.socket: // request
 						msg, _ := in.RecvMessage(0)
-						s.handler(msg, outPush)
+						s.incoming(msg, outPush)
 					case outPop.socket: // response
 						msg, _ := outPop.RecvMessage(0)
-						in.SendMessage(msg)
+						s.outgoing(msg, in)
 					}
 				}
 			}

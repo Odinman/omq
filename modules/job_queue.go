@@ -2,25 +2,19 @@
 // reference: http://marcio.io/2015/07/handling-1-million-requests-per-minute-with-golang/
 package modules
 
-import (
-	"github.com/Odinman/ogo"
-)
+import ()
 
 type Job struct {
 	Payload interface{} `json:"payload,omitempty"`
 	Result  interface{} `json:"result,omitempty"`
-	conn    *ZSocket
-	access  *ogo.Access
 }
 
-/* {{{ func NewJob(r []string, c *ZSocket) *Job
+/* {{{ func NewJob(pl interface{}) *Job
  *
  */
-func NewJob(r []string, c *ZSocket) *Job {
+func NewJob(pl interface{}) *Job {
 	return &Job{
-		Payload: NewRequest(r),
-		conn:    c,
-		access:  ogo.NewAccess(),
+		Payload: pl,
 	}
 }
 
@@ -29,14 +23,14 @@ func NewJob(r []string, c *ZSocket) *Job {
 /* {{{ func (j *Job) SaveAccess(payload interface{})
  *
  */
-func (j *Job) SaveAccess() {
-	if r, ok := j.Result.([]string); ok && r[0] == RESPONSE_NIL && (j.Payload.(*Request).act == COMMAND_POP || j.Payload.(*Request).act == COMMAND_BPOP) {
-		// BPOP&POP操作没有返回时, 不记录
-	} else {
-		j.access.App = j
-		j.access.Save()
-	}
-}
+//func (j *Job) SaveAccess() {
+//	if r, ok := j.Result.([]string); ok && r[0] == RESPONSE_NIL && (j.Payload.(*Request).act == COMMAND_POP || j.Payload.(*Request).act == COMMAND_BPOP) {
+//		// BPOP&POP操作没有返回时, 不记录
+//	} else {
+//		j.access.App = j
+//		j.access.Save()
+//	}
+//}
 
 /* }}} */
 
@@ -49,20 +43,6 @@ type JobWorker struct {
 	Handler    JobFunc
 }
 
-/* {{{ func newJobWorker(wp chan chan Job, jf JobFunc) *JobWorker
- *
- */
-func newJobWorker(wp chan chan *Job, jf JobFunc) *JobWorker {
-	return &JobWorker{
-		pool:       wp,
-		jobChannel: make(chan *Job),
-		quit:       make(chan bool),
-		Handler:    jf,
-	}
-}
-
-/* }}} */
-
 /* {{{ func (jw *JobWorker) Start(sn int)
  *
  */
@@ -74,16 +54,8 @@ func (jw *JobWorker) Start(sn int) {
 
 			select {
 			case job := <-jw.jobChannel:
-				// we have received a work request.
-				//client, cmd := utils.Unwrap(job.Request)
-				////ogo.Debug("[worker %d] [client: %q] [cmd: %s]", sn, client, cmd)
-				//if c, e := job.conn.SendMessage(client, "", RESPONSE_OK); e != nil {
-				//	ogo.Debug("send failed: %s", e)
-				//} else {
-				//	ogo.Debug("send success: %d", c)
-				//}
+				// we have received a job
 				jw.Handler(job)
-
 			case <-jw.quit:
 				// we have received a signal to stop
 				return
@@ -135,7 +107,12 @@ func NewWorkerPool(maxWorkers int, jf JobFunc) *WorkerPool {
 func (wp *WorkerPool) Run() {
 	// starting n number of workers
 	for i := 0; i < wp.max; i++ {
-		worker := newJobWorker(wp.pool, wp.handler)
+		worker := &JobWorker{
+			pool:       wp.pool,
+			jobChannel: make(chan *Job),
+			quit:       make(chan bool),
+			Handler:    wp.handler,
+		}
 		worker.Start(i)
 	}
 

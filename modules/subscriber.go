@@ -36,10 +36,6 @@ func (o *OMQ) newSubscriber() {
 					o.Trace("recv msg: %q", msg)
 
 					o.execCommand(msg)
-					//// 存到本地存储(同步)
-					//if err := o.localStorage(msg); err != nil {
-					//	o.Debug("error: %s", err)
-					//}
 
 					liveness = HEARTBEAT_LIVENESS
 				} else if len(msg) == 1 {

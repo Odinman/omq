@@ -2,6 +2,7 @@ package modules
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Odinman/ogo"
 	"github.com/Odinman/omq/utils"
@@ -21,32 +22,9 @@ type Request struct {
 	Client  string `json:"client,omitempty"`
 	act     string
 	Command []string `json:"command,omitempty"`
+	conn    *ZSocket
+	access  *ogo.Access
 }
-
-/* {{{ func (o *OMQ) serveHandler(msg []string, writer *ZSocket) error
- *
- */
-func (o *OMQ) serveHandler(msg []string, writer *ZSocket) {
-	o.wp.queue <- NewJob(msg, writer)
-}
-
-/* }}} */
-
-/* {{{ func NewRequest(msg []string) *Request
- *
- */
-func NewRequest(msg []string) *Request {
-	r := new(Request)
-	client, cmd := utils.Unwrap(msg)
-	r.Client = client
-	if len(cmd) > 1 {
-		r.act = cmd[0]
-		r.Command = cmd
-	}
-	return r
-}
-
-/* }}} */
 
 var (
 	cc *redis.ClusterClient
@@ -56,6 +34,68 @@ func init() {
 	ogo.AddWorker(&OMQ{})
 }
 
+/* {{{ func (o *OMQ) inHandler(msg []string, writer *ZSocket) error
+ *
+ */
+func (o *OMQ) inHandler(msg []string, writer *ZSocket) {
+	// build payload
+	request := NewRequest(msg, writer)
+	// create a job
+	job := NewJob(request)
+	// save job in access
+	request.access.App = job
+	// push job to worker pool
+	o.wp.queue <- job
+}
+
+/* }}} */
+
+/* {{{ func (o *OMQ) outHandler(msg []stroutg, writer *ZSocket) error
+ *
+ */
+func (o *OMQ) outHandler(msg []string, writer *ZSocket) {
+	l := len(msg)
+	start, _ := time.Parse(time.RFC3339Nano, msg[l-1])
+	writer.SendMessage(msg[0 : l-1])
+	o.Debug("total duration: %s", time.Now().Sub(start))
+}
+
+/* }}} */
+
+/* {{{ func NewRequest(msg []string, writer *ZSocket) *Request
+ *
+ */
+func NewRequest(msg []string, writer *ZSocket) *Request {
+	r := new(Request)
+	client, cmd := utils.Unwrap(msg)
+	r.Client = client
+	if len(cmd) > 1 {
+		r.act = cmd[0]
+		r.Command = cmd
+	}
+	r.conn = writer
+	r.access = ogo.NewAccess()
+	return r
+}
+
+/* }}} */
+
+/* {{{ func (r *Request) SaveAccess(rt []string)
+ *
+ */
+func (r *Request) SaveAccess(rt []string) {
+	if rt[0] == RESPONSE_NIL && (r.act == COMMAND_POP || r.act == COMMAND_BPOP) {
+		// BPOP&POP操作没有返回时, 不记录
+	} else {
+		r.access.Save()
+	}
+}
+
+/* }}} */
+
+/* {{{ func (o *OMQ) Main() error
+ *
+ */
 func (o *OMQ) Main() error {
 	//read config
 	o.getConfig()
@@ -72,8 +112,8 @@ func (o *OMQ) Main() error {
 		o.newSubscriber()
 	}
 
-	// publisher
-	o.pub, _ = NewZSocket("PUB", 50000, fmt.Sprint("tcp://*:", basePort+1))
+	// publisher, port = baseport + 1
+	o.pub, _ = NewZSocket("PUB", 65536, fmt.Sprint("tcp://*:", basePort+1))
 	defer o.pub.Close()
 
 	// block tasks
@@ -82,12 +122,14 @@ func (o *OMQ) Main() error {
 	o.mqPool = utils.NewMQPool()
 	defer o.mqPool.Destroy()
 
-	// create response pool, and regist job function
+	// create responser pool, and regist job function
 	o.wp = NewWorkerPool(responseNodes, o.response)
 	o.wp.Run()
 
-	o.server, _ = NewZServer(o.serveHandler, fmt.Sprint("tcp://*:", basePort))
+	o.server, _ = NewZServer(o.inHandler, o.outHandler, fmt.Sprint("tcp://*:", basePort))
 	defer o.server.Close()
 
 	return o.server.Serve()
 }
+
+/* }}} */
