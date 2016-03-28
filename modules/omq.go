@@ -5,17 +5,19 @@ import (
 	"time"
 
 	"github.com/Odinman/ogo"
+	ogoutils "github.com/Odinman/ogo/utils"
 	"github.com/Odinman/omq/utils"
 	"github.com/dustin/randbo"
 	"gopkg.in/redis.v3"
 )
 
 type OMQ struct {
-	server     *utils.ZServer
-	wp         *utils.WorkerPool
-	pub        *utils.ZSocket
-	mqPool     *utils.MQPool
-	blockTasks map[string](chan string)
+	server *utils.ZServer
+	wp     *utils.WorkerPool
+	pub    *utils.ZSocket
+	mqPool *utils.MQPool
+	//blockTasks map[string](chan string)
+	blockTasks *ogoutils.SafeMap
 	ogo.Worker
 }
 
@@ -129,7 +131,8 @@ func (o *OMQ) Main() error {
 	defer o.pub.Close()
 
 	// block tasks
-	o.blockTasks = make(map[string](chan string))
+	//o.blockTasks = make(map[string](chan string))
+	o.blockTasks = ogoutils.NewSafeMap()
 	// mq pool
 	o.mqPool = utils.NewMQPool()
 	defer o.mqPool.Destroy()

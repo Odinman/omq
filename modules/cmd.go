@@ -67,13 +67,15 @@ func (o *OMQ) execCommand(cmd []string, opts ...string) (result []string) {
 		value = append([]string{taskId}, value...) //放前面
 		if err := o.mqPool.Push(key, value); err == nil {
 			o.Debug("push block task %s successful, task id: %s [%s]", key, taskId, time.Now())
-			o.blockTasks[taskId] = make(chan string, 1)
+			//o.blockTasks[taskId] = make(chan string, 1)
+			taskChan := make(chan string, 1)
+			o.blockTasks.Set(taskId, taskChan)
 			bto := time.Tick(BTASK_TIMEOUT)
 			select {
 			case <-bto: //超时
 				o.Info("waiting time out")
 				result = append(result, RESPONSE_ERROR, "time out")
-			case r := <-o.blockTasks[taskId]:
+			case r := <-taskChan:
 				o.Debug("block task result: %s [%s]", r, time.Now())
 				if r == "0" {
 					result = append(result, RESPONSE_ERROR, "exec failed")
@@ -81,7 +83,8 @@ func (o *OMQ) execCommand(cmd []string, opts ...string) (result []string) {
 					result = append(result, RESPONSE_OK, r)
 				}
 			}
-			delete(o.blockTasks, taskId)
+			//delete(o.blockTasks, taskId)
+			o.blockTasks.Delete(taskId)
 		} else {
 			o.Debug("push %s failed: %s", key, err)
 			result = append(result, RESPONSE_ERROR, err.Error())
@@ -89,8 +92,8 @@ func (o *OMQ) execCommand(cmd []string, opts ...string) (result []string) {
 	case COMMAND_COMPLETE: // 完成阻塞任务
 		if len(cmd) > 3 {
 			if taskId := cmd[2]; taskId != "" {
-				if _, ok := o.blockTasks[taskId]; ok {
-					o.blockTasks[taskId] <- cmd[3]
+				if taskChan := o.blockTasks.Get(taskId); taskChan != nil {
+					taskChan.(chan string) <- cmd[3]
 					result = append(result, RESPONSE_OK)
 				} else {
 					result = append(result, RESPONSE_ERROR, "not found task")
